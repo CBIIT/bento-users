@@ -59,15 +59,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(storeUserInfoMiddleware);
-app.use('/api/auth/graphql', graphql);
+app.use('/api/users/graphql', graphql);
 
 /* GET ping-ping for health checking. */
-app.get('/ping', function (req, res, next) {
+app.get('/api/users/ping', function (req, res, next) {
     res.send(`pong`);
 });
 
 /* GET version for health checking and version checking. */
-app.get('/version', function (req, res, next) {
+app.get('/api/users/version', function (req, res, next) {
     res.json({
         version: config.version, date: config.date
     });
