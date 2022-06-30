@@ -41,7 +41,7 @@ const errorHandler = function(err, req, res, next) {
 };
 
 const storeUserInfoMiddleware = async function (req, res, next) {
-    req.userInfo = req.body.userInfo;
+    req.userInfo = {email: req.headers.email, idp: req.headers.idp}
     next();
 };
 
@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(express.static(path.join(__dirname, 'public')));
-//todo verify source of request, if needed
+
 app.use(storeUserInfoMiddleware);
 app.use('/api/auth/graphql', graphql);
 
