@@ -29,7 +29,7 @@ module.exports = graphqlHTTP((req, res) => {
         schema: schema,
         rootValue: root,
         context: {
-            userInfo: req.userInfo
+            userInfo: req.session.userInfo
         },
         customFormatErrorFn: (error) => {
             let status = undefined;

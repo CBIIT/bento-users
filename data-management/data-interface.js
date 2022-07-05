@@ -22,14 +22,13 @@ async function checkAdminPermissions(userInfo) {
     catch (err){
         return false;
     }
-
 }
 
 const getMyUser = async (_, context) => {
     try{
         let userInfo = context.userInfo;
         if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.MISSING_USER_INFO);
+            return new Error(errorName.NOT_LOGGED_IN);
         }
         let result = await neo4j.getMyUser(userInfo);
         if (!result){
@@ -47,12 +46,8 @@ const getMyUser = async (_, context) => {
 const listUsers = async (input, context) => {
     try {
         let userInfo = context.userInfo;
-        //Validate provided user info
-        if (!verifyUserInfo(userInfo)) {
-            return new Error(errorName.MISSING_USER_INFO);
-        }
         //Check if not admin
-        else if (!await checkAdminPermissions(userInfo)) {
+        if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         //Execute query
@@ -114,7 +109,7 @@ const approveUser = async (parameters, context) => {
     try {
         let userInfo = context.userInfo;
         if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.MISSING_USER_INFO);
+            return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         } else if (await neo4j.checkAlreadyApproved(parameters.userID)) {
@@ -147,7 +142,7 @@ const rejectUser = async (parameters, context) => {
     try {
         let userInfo = context.userInfo;
         if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.MISSING_USER_INFO);
+            return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         } else if (await neo4j.checkAlreadyRejected(parameters.userID)) {

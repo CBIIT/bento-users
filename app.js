@@ -7,6 +7,7 @@ const logger = require('morgan');
 const fs = require('fs');
 const cors = require('cors');
 const config = require('./config');
+const {createSession} = require("./services/session");
 
 //Print configuration
 console.log(config);
@@ -40,10 +41,6 @@ const errorHandler = function(err, req, res, next) {
     res.json(res.locals.message);
 };
 
-const storeUserInfoMiddleware = async function (req, res, next) {
-    req.userInfo = {email: req.headers.email, idp: req.headers.idp}
-    next();
-};
 
 // Initialize app
 const app = express();
@@ -55,10 +52,10 @@ app.use(cors());
 app.use(logger('combined', { stream: accessLogStream }))
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(createSession({ sessionSecret: config.cookie_secret, session_timeout: config.session_timeout }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(storeUserInfoMiddleware);
 app.use('/api/users/graphql', graphql);
 
 /* GET ping-ping for health checking. */

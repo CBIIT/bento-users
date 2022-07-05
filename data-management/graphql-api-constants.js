@@ -13,14 +13,9 @@ exports.errorName = {
     INVALID_ROLE: "INVALID_ROLE",
     INVALID_STATUS: "INVALID_STATUS",
     UNABLE_TO_REGISTER_USER: 'UNABLE_TO_REGISTER_USER',
-    MISSING_USER_INFO: 'MISSING_USER_INFO',
 };
 
 exports.errorType = {
-    MISSING_USER_INFO: {
-        message: "API requests are required to contain a 'userInfo' object containing 'email' and 'idp' values",
-        statusCode: 400
-    },
     MISSING_INPUTS: {
         message: "Inputs for email and IDP are required inputs for registration",
         statusCode: 400
