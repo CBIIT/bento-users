@@ -7,7 +7,7 @@ const config = {
   emails_enabled: process.env.EMAILS_ENABLED ? process.env.EMAILS_ENABLED.toLowerCase() === 'true' : true,
 
   cookie_secret: process.env.COOKIE_SECRET,
-  session_timeout: process.env.SESSION_TIMEOUT ? parseInt(process.env.SESSION_TIMEOUT) : 30 * 60,  // 30 minutes
+  session_timeout: process.env.SESSION_TIMEOUT ? parseInt(process.env.SESSION_TIMEOUT) * 1000 : 1000 * 30 * 60,  // 30 minutes
 
   //Neo4j connection
   NEO4J_URI: process.env.NEO4J_URI,
