@@ -39,7 +39,7 @@ module.exports = graphqlHTTP((req, res) => {
                 body.error = errorType[error.message].message;
             } catch (err) {
                 status = 500;
-                body.error = "Internal server error"
+                body.error = "Internal server error: "+err;
             }
             res.status(status);
             return body;
