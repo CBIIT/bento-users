@@ -37,11 +37,18 @@ input UpdateUserInput {
     organization: String
 }
 
+type Arm {
+    armName: String
+    armID: String
+}
+
 type Query {
     "Admin only"
     listUsers(role: [String] = ["standard"], status: [String] = ["registered"]): [User]
     "Limit to current user only"
     getMyUser : User
+    "Open to any authenticated users"
+    listArms: [Arm]
 }
 
 type Mutation {
