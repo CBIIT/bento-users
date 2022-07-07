@@ -6,9 +6,10 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
-    "cookie-parser": "~1.4.4",
+    "cookie-parser": "~1.4.6",
     "cors": "^2.8.5",
     "debug": "~2.6.9",
+    "dotenv": "^16.0.1",
     "easygraphql-format-error": "^0.0.3",
     "express": "~4.16.1",
     "express-graphql": "^0.12.0",
@@ -22,14 +23,14 @@
     "lodash": "^4.17.21",
     "morgan": "~1.9.1",
     "neo4j-driver": "^4.4.5",
-    "newrelic": "^7.3.1",
+    "newrelic": "^7.5.2",
+    "node-fetch": "^2.6.7",
     "nodemailer": "^6.7.5",
     "session-file-store": "^1.5.0",
     "underscore": "^1.13.4",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "dotenv": "^16.0.1",
     "jest": "^28.1.1"
   }
 }

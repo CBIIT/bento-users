@@ -3,6 +3,7 @@ const data_interface = require('./data-interface');
 const {graphqlHTTP} = require("express-graphql");
 const {errorType} = require('./graphql-api-constants');
 
+
 //Read schema from schema.graphql file
 const schema = buildSchema(require("fs").readFileSync("graphql/schema.graphql", "utf8"));
 
@@ -20,22 +21,28 @@ const root = {
     // disableUser: data_interface.disableUser,
 };
 
+
+
 module.exports = graphqlHTTP((req, res) => {
     return {
         graphiql: true,
         schema: schema,
         rootValue: root,
         context: {
-            session: req.session
+            userInfo: req.session.userInfo
         },
         customFormatErrorFn: (error) => {
+            let status = undefined;
+            let body = {error: undefined};
             try {
-                res.status(errorType[error.message].statusCode);
-                error.message = errorType[error.message].message;
+                status = errorType[error.message].statusCode;
+                body.error = errorType[error.message].message;
             } catch (err) {
-                res.status(500);
+                status = 500;
+                body.error = "Internal server error: "+error;
             }
-            return error;
+            res.status(status);
+            return body;
         }
     }
 });

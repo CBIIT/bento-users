@@ -14,57 +14,28 @@ async function getAdminEmails(){
     return await neo4j.getAdminEmails();
 }
 
-// Sets userInfo in the session
-async function getUserSessionData(session, email) {
-    session.userInfo = {
-        email: email,
-        idp: config.idp
+async function checkAdminPermissions(userInfo) {
+    let result = await neo4j.getMyUser(userInfo);
+    try{
+        return result.role === 'admin';
     }
-    let result = await neo4j.getMyUser(session.userInfo);
-    if (result) {
-        if (result.status && result.status === 'approved') {
-            session.userInfo.status = result.status;
-        } else {
-            console.warn(`User "${email}" has not been approved!`)
-            throw errorType.NOT_APPROVED;
-        }
-        if (result.role) {
-            session.userInfo.role = result.role;
-        } else {
-            console.warn(`User "${email}" does not have a role assigned!`)
-            throw errorType.NOT_AUTHORIZED;
-        }
-    } else {
-        console.warn(`User "${email}" has not registered!`)
-        throw errorType.USER_NOT_FOUND;
+    catch (err){
+        return false;
     }
-
-}
-
-function checkAdminPermissions(userInfo) {
-    return checkApproved(userInfo) && userInfo.role === 'admin';
-}
-
-function checkStandardPermissions(userInfo) {
-    return checkApproved(userInfo) && (userInfo.role === 'standard' || userInfo.role === 'admin');
-}
-
-function checkApproved(userInfo) {
-    return checkForUserInfo(userInfo) && userInfo.role && userInfo.status === 'approved';
-}
-
-function checkForUserInfo(userInfo) {
-    return userInfo && userInfo.status;
 }
 
 const getMyUser = async (_, context) => {
     try{
-        let userInfo = context.session.userInfo;
-        if (checkForUserInfo(userInfo)) {
-            return neo4j.getMyUser(userInfo);
+        let userInfo = context.userInfo;
+        if (!verifyUserInfo(userInfo)){
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
+        let result = await neo4j.getMyUser(userInfo);
+        if (!result){
+            return new Error(errorName.USER_NOT_FOUND);
         }
         else {
-            return new Error(errorName.NOT_LOGGED_IN)
+            return result;
         }
     }
     catch (err){
@@ -72,23 +43,18 @@ const getMyUser = async (_, context) => {
     }
 }
 
-const listUsers = (input, context) => {
-    try{
-        let userInfo = context.session.userInfo;
-        //Check if not logged in
-        if (!userInfo){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
+const listUsers = async (input, context) => {
+    try {
+        let userInfo = context.userInfo;
         //Check if not admin
-        else if (!checkAdminPermissions(userInfo)) {
+        if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         //Execute query
         else {
             return neo4j.listUsers(input);
         }
-    }
-    catch (err){
+    } catch (err) {
         return err;
     }
 }
@@ -141,10 +107,10 @@ const registerUser = async (parameters, context) => {
 const approveUser = async (parameters, context) => {
     formatParams(parameters);
     try {
-        let userInfo = context.session.userInfo;
-        if (!userInfo) {
+        let userInfo = context.userInfo;
+        if (!verifyUserInfo(userInfo)){
             return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!checkAdminPermissions(userInfo)) {
+        } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         } else if (await neo4j.checkAlreadyApproved(parameters.userID)) {
             return new Error(errorName.ALREADY_APPROVED);
@@ -174,10 +140,10 @@ const approveUser = async (parameters, context) => {
 const rejectUser = async (parameters, context) => {
     formatParams(parameters);
     try {
-        let userInfo = context.session.userInfo;
-        if (!userInfo) {
+        let userInfo = context.userInfo;
+        if (!verifyUserInfo(userInfo)){
             return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!checkAdminPermissions(userInfo)) {
+        } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         } else if (await neo4j.checkAlreadyRejected(parameters.userID)) {
             return new Error(errorName.ALREADY_REJECTED);
@@ -205,10 +171,10 @@ const rejectUser = async (parameters, context) => {
 const editUser = async (parameters, context) => {
     formatParams(parameters);
     try {
-        let userInfo = context.session.userInfo;
+        let userInfo = context.userInfo;
         if (!userInfo) {
             return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!checkAdminPermissions(userInfo)) {
+        } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         else {
@@ -273,6 +239,10 @@ function formatParams(params){
     }
 }
 
+function verifyUserInfo(userInfo) {
+    return userInfo && userInfo.email && userInfo.idp;
+}
+
 // const updateMyUser = (input, context) => {
 //     try{
 //         let userInfo = context.session.userInfo;
@@ -322,7 +292,6 @@ module.exports = {
     approveUser: approveUser,
     rejectUser: rejectUser,
     editUser: editUser,
-    getUserSessionData: getUserSessionData,
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,

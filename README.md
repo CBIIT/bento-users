@@ -7,7 +7,6 @@ Following environmental variables are needed
 - DATE : build date
 - COOKIE_SECRET : secret used to sign cookies
 - SESSION_TIMEOUT : session timeout in seconds, default is 30 minutes
-- AUTHORIZATION_ENABLED : If not set to "true", then the authorization components will be disabled
 - EMAILS_ENABLED : If not set to "true", then the email notifications will be disabled
 # Neo4j configuration
 - NEO4J_URI: Bolt URI of the Neo4j database
@@ -30,18 +29,4 @@ Following environmental variables are needed
 # Additional configuration for email server
 - EMAIL_USER: email server's username as an additional parameter
 - EMAIL_PASSWORD: email server's password as an additional parameter
-# Google login configuration
-- GOOGLE_CLIENT_ID: Google cloud client id
-- GOOGLE_CLIENT_SECRET: Google cloud client secret
-- GOOGLE_REDIRECT_URL: redirecting url after successful authentication
-# NIH login configuration
-- NIH_CLIENT_ID: NIH login server client id
-- NIH_CLIENT_SECRET: NIH login client secret
-- NIH_BASE_URL: NIH login server url
-- NIH_REDIRECT_URL: redirecting url after successful authentication
-- NIH_USERINFO_URL: NIH API address to search user information
-- NIH_AUTHORIZE_URL: NIH API address to authenticate for login
-- NIH_TOKEN_URL: NIH API address to create token for login
-- NIH_LOGOUT_URL: NIH API address to invalidate token for logout
-- NIH_SCOPE: space-separated lists of identifiers to specify access privileges
-- NIH_PRO
+- EMAIL_SERVICE_EMAIL: 
