@@ -1,6 +1,6 @@
 const {v4} = require('uuid')
 const neo4j = require('./neo4j-service')
-const {errorName, valid_idps} = require("./graphql-api-constants");
+const {errorName, valid_idps, user_roles, user_statuses} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification
 } = require("./notifications");
@@ -192,37 +192,13 @@ const editUser = async (parameters, context) => {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         else {
-            if (parameters.role) {
-                if (!(parameters.role === 'admin' || parameters.role === 'standard')){
-                    return new Error(errorName.INVALID_ROLE);
-                }
+            if (parameters.role && !user_roles.includes(parameters.role)) {
+                return new Error(errorName.INVALID_ROLE);
             }
-            if (parameters.status) {
-                if (!(parameters.status === 'approved' || parameters.status === 'rejected' || parameters.status === 'registered')){
-                    return new Error(errorName.INVALID_STATUS);
-                }
+            if (parameters.status !== "" && parameters.status && !user_statuses.includes(parameters.status)) {
+                return new Error(errorName.INVALID_STATUS);
             }
-            parameters.editDate = (new Date()).toString()
-            if (parameters.status === 'approved') {
-                parameters.approvalDate = parameters.editDate
-                let response = await neo4j.approveUser(parameters)
-                if (!response) {
-                    return new Error(errorName.USER_NOT_FOUND);
-                }
-            }
-            else if (parameters.status === 'rejected') {
-                parameters.rejectionDate = parameters.editDate
-                let response = await neo4j.rejectUser(parameters)
-                if (!response) {
-                    return new Error(errorName.USER_NOT_FOUND);
-                }
-            }
-            else if (parameters.status === 'registered') {
-                let response = await neo4j.resetApproval(parameters)
-                if (!response) {
-                    return new Error(errorName.USER_NOT_FOUND);
-                }
-            }
+            parameters.editDate = (new Date()).toString();
             let response = await neo4j.editUser(parameters)
             if (response) {
                 let template_params = {

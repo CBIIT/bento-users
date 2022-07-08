@@ -170,18 +170,30 @@ async function resetApproval(parameters) {
 }
 
 async function editUser(parameters) {
-    const cypher =
+    let cypher =
         `
         MATCH (user:User)
         WHERE 
             user.userID = $userID
-        SET user.role = $role
-        SET user.organization = $organization
-        SET user.acl = $acl
         SET user.editDate = $editDate
-        SET user.comment = $comment
+        `;
+    const cypher_return =
+        `
         RETURN user
-    `
+        `;
+    if (parameters.role) {
+        cypher = cypher +
+        `
+            SET user.role = $role
+        `
+    }
+    if (parameters.status === "" || parameters.status) {
+        cypher = cypher +
+        `
+            SET user.status = $status
+        `
+    }
+    cypher = cypher + cypher_return;
     const result = await executeQuery(parameters, cypher, 'user');
     return result[0].properties;
 }

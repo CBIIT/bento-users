@@ -10,7 +10,7 @@ type User {
     IDP: String
     "admin, member (has ever been granted any accesses), non-member (never granted any access)"
     role: String
-    "null (login only), inactive (all accesses revoked), active, disabled, deleted"
+    "empty string (login only), inactive (all accesses revoked), active, disabled, deleted"
     status: String
 
     creationDate: String
