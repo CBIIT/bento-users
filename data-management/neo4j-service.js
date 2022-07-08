@@ -62,7 +62,7 @@ async function getMyUser(parameters) {
 
 async function listUsers(parameters) {
     const cypher =
-        `
+    `
         MATCH (user:User)
         WHERE user.role IN $role AND user.status IN $status
         return user 
@@ -73,6 +73,20 @@ async function listUsers(parameters) {
         users.push(x.properties)
     });
     return users;
+}
+
+async function listArms(parameters) {
+    const cypher =
+    `
+        MATCH (arm: Arm)
+        RETURN arm AS arms
+    `
+    const arms = []
+    const result = await executeQuery(parameters, cypher, 'arms');
+    result.forEach(x => {
+        arms.push(x.properties)
+    });
+    return arms;
 }
 
 //Mutations
@@ -253,6 +267,7 @@ exports.getAdminEmails = getAdminEmails
 exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
+exports.listArms = listArms
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

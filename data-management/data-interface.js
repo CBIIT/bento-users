@@ -1,7 +1,6 @@
 const {v4} = require('uuid')
 const neo4j = require('./neo4j-service')
-const config = require('../config');
-const {errorName, valid_idps, errorType} = require("./graphql-api-constants");
+const {errorName, valid_idps} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification
 } = require("./notifications");
@@ -56,6 +55,21 @@ const listUsers = async (input, context) => {
         }
     } catch (err) {
         return err;
+    }
+}
+
+const listArms = async (input, context) => {
+    try{
+        let userInfo = context.userInfo;
+        if (!verifyUserInfo(userInfo)){
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
+        else{
+            return await neo4j.listArms(input);
+        }
+    }
+    catch (err){
+        return err
     }
 }
 
@@ -292,6 +306,7 @@ module.exports = {
     approveUser: approveUser,
     rejectUser: rejectUser,
     editUser: editUser,
+    listArms: listArms,
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,
