@@ -2,38 +2,45 @@ type User {
     "User entered properties"
     firstName: String
     lastName: String
-    email: String
-    IDP: String
     organization: String
-    acl: [String]
 
     "System determined properties"
     userID: ID
-    registrationDate: String
-    approvalDate: String
-    rejectionDate: String
-    comment: String
-    editDate: String
-    "admin or standard"
-    role: String
-    "registered, approved, rejected, disabled, deleted"
-    status: String
-}
-
-input RegisterUserInput {
-    firstName: String
-    lastName: String
     email: String
     IDP: String
+    "admin, member (has ever been granted any accesses), non-member(never granted any access)"
+    role: String
+    "null (login only), inactive (all accesses revoked), active, disabled, deleted"
+    status: String
+
+    creationDate: String
+    editDate: String
+
+    acl: [Access]
+}
+
+type Access {
+    armID: String
+    armName: String
+    "requested, approved, rejected, revoked"
+    status: String
+    requestDate: String
+    "Name of the admin who approved/rejected this access"
+    reviewAdminName: String
+    reviewDate: String
+    comment: String
+}
+
+input RequestAccessInput {
+    firstName: String
+    lastName: String
     organization: String
-    acl: [String]
+    armIDs: [String]
 }
 
 input UpdateUserInput {
     firstName: String
     lastName: String
-    email: String
-    IDP: String
     organization: String
 }
 
@@ -44,23 +51,25 @@ type Arm {
 
 type Query {
     "Admin only"
-    listUsers(role: [String] = ["standard"], status: [String] = ["registered"]): [User]
+    listUsers(role: [String] = ["standard"], status: [String] = ["active"], accessStatus: [String] = ["requested", "approved"]): [User]
+    getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
+
     "Open to any authenticated users"
     listArms: [Arm]
 }
 
 type Mutation {
     "User initiated operations"
-    registerUser (userInfo: RegisterUserInput!): User
-#   "Limit to current user only"
-#    updateMyUser (userInfo: UpdateUserInput!): User
+    requestAccess (userInfo: RequestAccessInput!): User
+    updateMyUser (userInfo: UpdateUserInput!): User
 
     "Admin only operations"
-    approveUser (userID: ID!, role: String = "standard"): User
-    rejectUser (userID: ID!, comment: String = "No comment provided"): User
-    editUser(userID: ID!, role: String, status: String, organization: String, acl: [String], comment: String = "No comment provided"): User
+    approveAccess (userID: ID!, armID: String!): Access
+    rejectAccess (userID: ID!, armID: String!, comment: String!): Access
+    revokeAccess (userID: ID!, armID: String!, comment: String!): Access
+    editUser(userID: ID!, role: String, status: String): User
 #    deleteUser (userID: ID!): User
 #    disableUser (userID: ID!): User
 }
