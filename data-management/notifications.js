@@ -87,5 +87,17 @@ module.exports = {
                 email
             );
         });
-    }
+    },
+    sendAdminArmRequestNotification: async (email, template_params) => {
+        return await send(async () => {
+            await sendNotification(
+                email_constants.NOTIFICATION_SENDER,
+                email_constants.ADMIN_ARM_REQUEST_NOTIFICATION_SUBJECT,
+                await createEmailTemplate("notification-template.html", {
+                    message: email_constants.ADMIN_ARM_REQUEST_ACCESS_COMMENT, ...template_params
+                }),
+                email
+            );
+        });
+    },
 }
