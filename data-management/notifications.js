@@ -10,9 +10,14 @@ try {
     console.error(e)
 }
 
+const send = async (fn)=> {
+    if (email_constants) return await fn();
+    console.error("Unable to load email constants from file, email not sent");
+}
+
 module.exports = {
     sendAdminNotification: async (admins, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.ADMIN_NOTIFICATION_SUBJECT,
@@ -21,13 +26,10 @@ module.exports = {
                 }),
                 admins
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
-
+        });
     },
     sendRegistrationConfirmation: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.CONFIRMATION_SUBJECT,
@@ -36,12 +38,10 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
     },
     sendApprovalNotification: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.APPROVAL_SUBJECT,
@@ -50,12 +50,10 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
     },
     sendRejectionNotification: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.REJECTION_SUBJECT,
@@ -64,12 +62,10 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
     },
     sendEditNotification: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.EDIT_SUBJECT,
@@ -78,8 +74,18 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
+    },
+    sendArmAccessNotification: async (email, template_params) => {
+        return await send(async () => {
+            await sendNotification(
+                email_constants.NOTIFICATION_SENDER,
+                email_constants.ARM_REQUEST_ACCESS_SUBJECT,
+                await createEmailTemplate("notification-template.html", {
+                    message: email_constants.ARM_REQUEST_ACCESS_COMMENT, ...template_params
+                }),
+                email
+            );
+        });
     }
 }
