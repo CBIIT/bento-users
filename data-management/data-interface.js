@@ -241,6 +241,22 @@ const editUser = async (parameters, context) => {
     }
 }
 
+const updateMyUser = async (parameters, context) => {
+    formatParams(parameters);
+    try {
+        let userInfo = context.userInfo;
+        if (!userInfo) {
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
+        else{
+            parameters = {...parameters.userInfo, ...userInfo};
+            return await neo4j.updateMyUser(parameters, userInfo);
+        }
+    } catch (err) {
+        return err;
+    }
+}
+
 function formatParams(params){
     if (params.email){
         params.email = params.email.toLowerCase();
@@ -307,6 +323,7 @@ module.exports = {
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
+    updateMyUser: updateMyUser
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,

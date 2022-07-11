@@ -186,6 +186,39 @@ async function editUser(parameters) {
     return result[0].properties;
 }
 
+async function updateMyUser(parameters) {
+    let cypher =
+        `
+        MATCH (user:User)
+        WHERE
+            user.email = $email AND user.IDP = $idp
+        `;
+    if (parameters.firstName) {
+        cypher = cypher +
+            `
+            SET user.firstName = $firstName
+            `;
+    }
+    if (parameters.lastName) {
+        cypher = cypher +
+            `
+            SET user.lastName = $lastName
+            `;
+    }
+    if (parameters.organization) {
+        cypher = cypher +
+            `
+            SET user.organization = $organization
+            `;
+    }
+    cypher = cypher +
+        `
+        RETURN user
+        `;
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0].properties;
+}
+
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -268,6 +301,7 @@ exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
+exports.updateMyUser = updateMyUser
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
