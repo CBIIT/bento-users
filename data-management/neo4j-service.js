@@ -60,6 +60,41 @@ async function getMyUser(parameters) {
     return;
 }
 
+async function getUser(parameters) {
+    const cypher =
+        `
+        MATCH (user:User)
+        WHERE user.userID = $userID
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            status: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            status: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
 async function listUsers(parameters) {
     const cypher =
     `
@@ -256,6 +291,7 @@ async function executeQuery(parameters, cypher, returnLabel) {
 
 //Exported functions
 exports.getMyUser = getMyUser
+exports.getUser = getUser
 exports.listUsers = listUsers
 exports.registerUser = registerUser
 exports.approveUser = approveUser
