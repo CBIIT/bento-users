@@ -6,5 +6,6 @@ module.exports = Object.freeze({
     REVOKED: 'revoked',
     // user role
     STANDARD: 'standard',
-    MEMBER: 'member'
+    MEMBER: 'member',
+    NON_MEMBER: 'non-member'
 });
