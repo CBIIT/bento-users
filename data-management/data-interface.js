@@ -5,10 +5,11 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification
 } = require("./notifications");
 const {STANDARD, REQUESTED} = require("../constants/user-constant");
+const {isElementInArray} = require("../util/string-util");
 
 async function execute(fn) {
     try {
-        return await fn;
+        return await fn();
     } catch (err) {
         return err;
     }
@@ -52,7 +53,7 @@ const getMyUser = async (user, context) => {
         }
         return result;
     }
-    return await execute(await task());
+    return await execute(await task);
 }
 
 const listUsers = async (input, context) => {
@@ -89,17 +90,18 @@ const listArms = async (input, context) => {
 const inspectValidUser = async (parameters)=> {
     if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.IDP) {
         let idp = parameters.userInfo.IDP;
-        if (!valid_idps.includes(idp.toLowerCase())) throw new Error(errorName.INVALID_IDP);
+        if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
     } else {
         throw new Error(errorName.MISSING_INPUTS);
     }
 }
 
-const registerUser = async (parameters, context) => {
+const registerUser = async (parameters, _) => {
     formatParams(parameters.userInfo);
-    await inspectValidUser(parameters);
-    if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.IDP)) throw new Error(errorName.NOT_UNIQUE);
     const task = async () => {
+        await inspectValidUser(parameters);
+        if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.IDP)) throw new Error(errorName.NOT_UNIQUE);
+
         let generatedInfo = {
             userID: v4(),
             registrationDate: (new Date()).toString(),
@@ -123,7 +125,7 @@ const registerUser = async (parameters, context) => {
         }
         throw new Error(errorName.UNABLE_TO_REGISTER_USER);
     }
-    return execute(await task(parameters, context));
+    return await execute(await task);
 }
 
 
