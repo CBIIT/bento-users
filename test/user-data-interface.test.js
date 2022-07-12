@@ -63,37 +63,22 @@ describe('arm access Test', () => {
         expect(result.message).toBe(errorName.NOT_LOGGED_IN);
     });
 
-    test('/geyMyUser NOT_LOGGED_IN', async () => {
-
-        const fakeSession = {
-            userInfo: {
-                email: 'young.yoo@nih.gov',
-                // idp: 'nih',
-                userID: 9898,
-                firstName: 'yyy',
-                lastName: 'yoo',
-                organization: '',
-                acl: []
-            }};
-        const result = await getMyUser({}, fakeSession);
-        expect(result.message).toBe(errorName.NOT_LOGGED_IN);
-    });
-
     test('/geyMyUser Cause error', async () => {
 
         const fakeSession = {
             userInfo: {
-                email: 'young.yoo@nih.gov',
-                // idp: 'nih',
-                userID: 98989,
-                firstName: 'yyy',
-                lastName: 'yoo',
-                organization: '',
-                acl: []
+                email: 'testtest@nih.gov',
+                idp: 'nih',
+                firstName: 'test',
+                lastName: 'test',
             }};
 
-        await getMyUser({}, fakeSession);
-        // await expect(registerUser).toBeCalledTimes(1)
+        const TEST_ERROR = 'TEST ERROR';
+        getMyUserService.mockImplementation(() => {
+            throw new Error(TEST_ERROR);
+        });
+        const result = await getMyUser({}, fakeSession);
+        expect(result.message).toBe(TEST_ERROR);
     });
 
 
