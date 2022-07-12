@@ -26,7 +26,7 @@ describe('arm access Test', () => {
         let parameters = {
             userInfo: {
                 email: 'testtest@nih.gov',
-                IDP: 'nih',
+                idp: 'nih',
                 userID: 9898,
                 firstName: 'yyy',
                 lastName: 'test',
@@ -47,7 +47,7 @@ describe('arm access Test', () => {
         let parameters = {
             userInfo: {
                 email: 'test.test@nih.gov',
-                IDP: 'nih',
+                idp: 'nih',
             }
         }
         const result = await registerUser(parameters);

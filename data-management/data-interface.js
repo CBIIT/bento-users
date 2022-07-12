@@ -42,7 +42,7 @@ const getMyUser = async (_, context) => {
         if (!result) {
             const user = UserBuilder.createUserFromSession(context.userInfo);
             // no email notification for auto-generated user
-            await registerUser({ userInfo: user.getUserInfo(), isNotify: false });
+            return await registerUser({ userInfo: user.getUserInfo(), isNotify: false });
         }
         return result;
     }
@@ -81,8 +81,8 @@ const listArms = async (input, context) => {
 }
 
 const inspectValidUser = async (parameters)=> {
-    if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.IDP) {
-        let idp = parameters.userInfo.IDP;
+    if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.idp) {
+        let idp = parameters.userInfo.idp;
         if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
     } else {
         throw new Error(errorName.MISSING_INPUTS);
@@ -93,7 +93,7 @@ const registerUser = async (parameters, _) => {
     formatParams(parameters.userInfo);
     const task = async () => {
         await inspectValidUser(parameters);
-        if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.IDP)) throw new Error(errorName.NOT_UNIQUE);
+        if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
         let generatedInfo = {
             userID: v4(),

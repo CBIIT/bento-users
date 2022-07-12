@@ -97,7 +97,7 @@ async function registerUser(parameters) {
             firstName: $firstName,
             lastName: $lastName,
             email: $email,
-            IDP: $IDP,
+            IDP: $idp,
             organization: $organization,
             userID: $userID,
             registrationDate: $registrationDate,

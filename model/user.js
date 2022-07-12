@@ -17,7 +17,7 @@ class User {
     getRole() { return this._role };
     getOrganization() { return this._organization; }
     getUserInfo() {
-        return {firstName: this._firstName, lastName: this._lastName, email: this._email, role: this._role, IDP: this._idp, organization: this._organization, acl: this._acl};
+        return {firstName: this._firstName, lastName: this._lastName, email: this._email, role: this._role, idp: this._idp, organization: this._organization, acl: this._acl};
     }
 }
 
