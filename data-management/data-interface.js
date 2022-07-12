@@ -4,6 +4,15 @@ const {errorName, valid_idps} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification
 } = require("./notifications");
+const {STANDARD, REQUESTED} = require("../constants/user-constant");
+
+async function execute(fn) {
+    try {
+        return await fn;
+    } catch (err) {
+        return err;
+    }
+}
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -23,23 +32,27 @@ async function checkAdminPermissions(userInfo) {
     }
 }
 
-const getMyUser = async (_, context) => {
-    try{
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
+const getMyUser = async (user, context) => {
+    const task = async () => {
+        if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+        let result = await neo4j.getMyUser(context.userInfo);
+        // If not exists, register user
+        if (!result) {
+            let parameters = {
+                userInfo: {
+                    email: context.userInfo.email,
+                    IDP: context.userInfo.idp,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    organization: '',
+                    acl: []
+                }
+            }
+            await registerUser(parameters);
         }
-        let result = await neo4j.getMyUser(userInfo);
-        if (!result){
-            return new Error(errorName.USER_NOT_FOUND);
-        }
-        else {
-            return result;
-        }
+        return result;
     }
-    catch (err){
-        return err
-    }
+    return await execute(await task());
 }
 
 const listUsers = async (input, context) => {
@@ -73,26 +86,25 @@ const listArms = async (input, context) => {
     }
 }
 
-const registerUser = async (parameters, context) => {
-    formatParams(parameters.userInfo);
+const inspectValidUser = async (parameters)=> {
     if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.IDP) {
         let idp = parameters.userInfo.IDP;
-        if (!valid_idps.includes(idp.toLowerCase())){
-            return new Error(errorName.INVALID_IDP);
-        }
-        let unique = await checkUnique(parameters.userInfo.email, idp)
-        if (!unique) {
-            return new Error(errorName.NOT_UNIQUE);
-        }
+        if (!valid_idps.includes(idp.toLowerCase())) throw new Error(errorName.INVALID_IDP);
     } else {
-        return new Error(errorName.MISSING_INPUTS);
+        throw new Error(errorName.MISSING_INPUTS);
     }
-    try {
+}
+
+const registerUser = async (parameters, context) => {
+    formatParams(parameters.userInfo);
+    await inspectValidUser(parameters);
+    if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.IDP)) throw new Error(errorName.NOT_UNIQUE);
+    const task = async () => {
         let generatedInfo = {
             userID: v4(),
             registrationDate: (new Date()).toString(),
-            status: "registered",
-            role: "standard"
+            status: REQUESTED,
+            role: STANDARD
         };
         let registrationInfo = {
             ...parameters.userInfo,
@@ -109,12 +121,9 @@ const registerUser = async (parameters, context) => {
             await sendRegistrationConfirmation(response.email, template_params)
             return response;
         }
-        else {
-            return new Error(errorName.UNABLE_TO_REGISTER_USER);
-        }
-    } catch (err) {
-        return err;
+        throw new Error(errorName.UNABLE_TO_REGISTER_USER);
     }
+    return execute(await task(parameters, context));
 }
 
 
