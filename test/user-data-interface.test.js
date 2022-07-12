@@ -4,12 +4,20 @@ const {getAdminEmails, registerUser: registerUserService,getMyUser:getMyUserServ
 const {errorName} = require("../data-management/graphql-api-constants");
 // Create Data management mock
 jest.mock("../data-management/neo4j-service");
-// // // Create email notification mock object
+// Create email notification mock object
 jest.mock("../data-management/notifications");
 
 describe('arm access Test', () => {
+    const fakeSession = {
+        userInfo: {
+            email: 'testtest@nih.gov',
+            idp: 'nih',
+            firstName: 'test',
+            lastName: 'test',
+        }};
+
     test('/register user test', async () => {
-        getAdminEmails.mockReturnValue(Promise.resolve(["young.yoo@nih.gov"]))
+        getAdminEmails.mockReturnValue(Promise.resolve(["test.test@nih.gov"]))
         sendAdminNotification.mockReturnValue(Promise.resolve());
         sendRegistrationConfirmation.mockReturnValue(Promise.resolve());
         registerUserService.mockReturnValue(Promise.resolve({firstName: 'test', lastName: 'test'}));
@@ -17,11 +25,11 @@ describe('arm access Test', () => {
 
         let parameters = {
             userInfo: {
-                email: 'young.yoo@nih.gov',
+                email: 'testtest@nih.gov',
                 IDP: 'nih',
                 userID: 9898,
                 firstName: 'yyy',
-                lastName: 'yoo',
+                lastName: 'test',
                 organization: '',
                 acl: []
             }
@@ -38,41 +46,22 @@ describe('arm access Test', () => {
         checkUnique.mockReturnValue(Promise.resolve(false));
         let parameters = {
             userInfo: {
-                email: 'young.yoo@nih.gov',
+                email: 'test.test@nih.gov',
                 IDP: 'nih',
             }
         }
-
         const result = await registerUser(parameters);
         expect(result.message).toBe(errorName.NOT_UNIQUE);
     });
 
-
     test('/geyMyUser NOT_LOGGED_IN', async () => {
-        const fakeSession = {
-            userInfo: {
-                email: 'young.yoo@nih.gov',
-                // idp: 'nih',
-                userID: 9898,
-                firstName: 'yyy',
-                lastName: 'yoo',
-                organization: '',
-                acl: []
-            }};
-        const result = await getMyUser({}, fakeSession);
+        let session = JSON.parse(JSON.stringify(fakeSession));
+        delete session.userInfo.idp;
+        const result = await getMyUser({}, session);
         expect(result.message).toBe(errorName.NOT_LOGGED_IN);
     });
 
-    test('/geyMyUser Cause error', async () => {
-
-        const fakeSession = {
-            userInfo: {
-                email: 'testtest@nih.gov',
-                idp: 'nih',
-                firstName: 'test',
-                lastName: 'test',
-            }};
-
+    test('/geyMyUser throw error', async () => {
         const TEST_ERROR = 'TEST ERROR';
         getMyUserService.mockImplementation(() => {
             throw new Error(TEST_ERROR);
@@ -81,5 +70,17 @@ describe('arm access Test', () => {
         expect(result.message).toBe(TEST_ERROR);
     });
 
+    test.concurrent('/register user after getMyUser', async () => {
+        sendAdminNotification.mockReturnValue(Promise.resolve());
+        sendRegistrationConfirmation.mockReturnValue(Promise.resolve());
+        getMyUserService.mockReturnValue(Promise.resolve(undefined));
+        registerUserService.mockReturnValue(Promise.resolve());
+        checkUnique.mockReturnValue(Promise.resolve(true));
 
+        await getMyUser({}, fakeSession);
+
+        expect(registerUserService).toBeCalledTimes(1);
+        expect(sendAdminNotification).toBeCalledTimes(0);
+        expect(sendRegistrationConfirmation).toBeCalledTimes(0);
+    });
 });

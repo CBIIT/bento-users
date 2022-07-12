@@ -6,6 +6,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
 } = require("./notifications");
 const {STANDARD, REQUESTED} = require("../constants/user-constant");
 const {isElementInArray} = require("../util/string-util");
+const UserBuilder = require("../model/user");
 
 async function execute(fn) {
     try {
@@ -33,27 +34,19 @@ async function checkAdminPermissions(userInfo) {
     }
 }
 
-const getMyUser = async (user, context) => {
+const getMyUser = async (_, context) => {
     const task = async () => {
         if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
         let result = await neo4j.getMyUser(context.userInfo);
-        // If not exists, register user
+        // store user if not exists in db
         if (!result) {
-            let parameters = {
-                userInfo: {
-                    email: context.userInfo.email,
-                    IDP: context.userInfo.idp,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    organization: '',
-                    acl: []
-                }
-            }
-            await registerUser(parameters);
+            const user = UserBuilder.createUserFromSession(context.userInfo);
+            // no email notification for auto-generated user
+            await registerUser({ userInfo: user.getUserInfo(), isNotify: false });
         }
         return result;
     }
-    return await execute(await task);
+    return await execute(task);
 }
 
 const listUsers = async (input, context) => {
@@ -113,7 +106,8 @@ const registerUser = async (parameters, _) => {
             ...generatedInfo
         };
         let response = await neo4j.registerUser(registrationInfo);
-        if (response) {
+        const notify = (!parameters.isNotify) ? true: parameters.isNotify;
+        if (response && notify) {
             let adminEmails = await getAdminEmails();
             let template_params = {
                 firstName: response.firstName,
@@ -125,7 +119,7 @@ const registerUser = async (parameters, _) => {
         }
         throw new Error(errorName.UNABLE_TO_REGISTER_USER);
     }
-    return await execute(await task);
+    return await execute(task);
 }
 
 
