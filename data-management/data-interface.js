@@ -80,7 +80,7 @@ const listArms = async (input, context) => {
     }
 }
 
-const inspectValidUser = async (parameters)=> {
+const inspectValidUser = (parameters)=> {
     if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.idp) {
         let idp = parameters.userInfo.idp;
         if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
@@ -92,7 +92,7 @@ const inspectValidUser = async (parameters)=> {
 const registerUser = async (parameters, _) => {
     formatParams(parameters.userInfo);
     const task = async () => {
-        await inspectValidUser(parameters);
+        inspectValidUser(parameters);
         if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
         let generatedInfo = {
