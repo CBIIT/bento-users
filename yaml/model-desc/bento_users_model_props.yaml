@@ -25,6 +25,7 @@ PropDefinitions:
     Type:
       - "google"
       - "NIH"
+      - "login.gov"
       - "test-idp"
     Req: true
   #Property of User
