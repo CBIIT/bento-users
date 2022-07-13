@@ -51,7 +51,7 @@ type Arm {
 
 type Query {
     "Admin only"
-    listUsers(role: [String] = ["member"], status: [String] = ["active"], accessStatus: [String] = ["requested", "approved"]): [User]
+    listUsers(role: [String] = ["member"], userStatus: [String] = ["active"], accessStatus: [String] = ["requested", "approved"]): [User]
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
