@@ -49,6 +49,26 @@ const getMyUser = async (_, context) => {
     return await execute(task);
 }
 
+const getUser = async (parameters, context) => {
+    try {
+        let userInfo = context.userInfo;
+        if (!verifyUserInfo(userInfo)){
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
+        //Check if not admin
+        if (!await checkAdminPermissions(userInfo)) {
+            return new Error(errorName.NOT_AUTHORIZED);
+        }
+        //Execute query
+        else {
+            let result =  await neo4j.getUser(parameters);
+            return result;
+        }
+    } catch (err) {
+        return err;
+    }
+}
+
 const listUsers = async (input, context) => {
     try {
         let userInfo = context.userInfo;
@@ -306,6 +326,7 @@ function verifyUserInfo(userInfo) {
 
 module.exports = {
     getMyUser: getMyUser,
+    getUser: getUser,
     listUsers: listUsers,
     registerUser: registerUser,
     approveUser: approveUser,
