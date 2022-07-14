@@ -40,9 +40,9 @@ const getMyUser = async (_, context) => {
         let result = await neo4j.getMyUser(context.userInfo);
         // store user if not exists in db
         if (!result) {
-            const user = UserBuilder.createUserFromSession(context.userInfo);
+            const user = UserBuilder.createUser(context.userInfo);
             // no email notification for auto-generated user
-            return await registerUser({ userInfo: user.getUserInfo(), isNotify: false });
+            return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
         }
         return result;
     }
@@ -97,7 +97,6 @@ const registerUser = async (parameters, _) => {
 
         let generatedInfo = {
             userID: v4(),
-            registrationDate: (new Date()).toString(),
             status: REQUESTED,
             role: STANDARD
         };
@@ -106,17 +105,19 @@ const registerUser = async (parameters, _) => {
             ...generatedInfo
         };
         let response = await neo4j.registerUser(registrationInfo);
-        const notify = (!parameters.isNotify) ? true: parameters.isNotify;
+        const notify = (parameters.isNotify === false) ? parameters.isNotify: true;
         if (response && notify) {
-            let adminEmails = await getAdminEmails();
-            let template_params = {
-                firstName: response.firstName,
-                lastName: response.lastName
-            }
-            await sendAdminNotification(adminEmails, template_params);
-            await sendRegistrationConfirmation(response.email, template_params)
-            return response;
+            setImmediate(async () => {
+                let adminEmails = await getAdminEmails();
+                let template_params = {
+                    firstName: response.firstName,
+                    lastName: response.lastName
+                }
+                await sendAdminNotification(adminEmails, template_params);
+                await sendRegistrationConfirmation(response.email, template_params)
+            });
         }
+        if (response) return response;
         throw new Error(errorName.UNABLE_TO_REGISTER_USER);
     }
     return await execute(task);

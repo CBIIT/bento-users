@@ -1,4 +1,5 @@
 const UserBuilder = require("../model/user");
+const {STANDARD, REQUESTED} = require("../constants/user-constant");
 
 describe('User Class Test', () => {
     const firstName = 'first';
@@ -7,7 +8,7 @@ describe('User Class Test', () => {
     const idp = 'nih';
 
     test('/user create, null idp, null acp', () => {
-        const user = UserBuilder.createUser(firstName, lastName, email, idp);
+        const user = UserBuilder.createUserFromSession(firstName, lastName, email, idp);
         expect(user.getFirstName()).toBe(firstName);
         expect(user.getLastName()).toBe(lastName);
         expect(user.getEmail()).toBe(email);
@@ -18,17 +19,20 @@ describe('User Class Test', () => {
     test('/user create', () => {
 
         const acl = ['a', 'b', 'c'];
-        const role = 'standard';
+        const role = STANDARD;
+        const status = REQUESTED;
         const organization = 'test-research';
 
         const user = new UserBuilder(firstName, lastName, email, idp)
             .setACL(acl)
             .setRole(role)
+            .setStatus(status)
             .setOrganization(organization)
             .build();
         expect(user.getACL()).toStrictEqual(acl);
         expect(user.getOrganization()).toStrictEqual(organization);
         expect(user.getRole()).toStrictEqual(role);
+        expect(user.getStatus()).toStrictEqual(status);
     });
 
     test('/create user from session', () => {
@@ -40,8 +44,9 @@ describe('User Class Test', () => {
                 idp: 'nih'
             }
         }
-        const user = UserBuilder.createUserFromSession(context.userInfo);
+        const user = UserBuilder.createUser(context.userInfo);
         expect(user.getUserInfo()).toBeTruthy();
+        expect(user.getUserInfo().firstName).toBe(context.userInfo.firstName);
     });
 
 });

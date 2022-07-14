@@ -1,5 +1,6 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
+const {getTimeNow} = require("../util/time-util");
 const driver = neo4j.driver(config.NEO4J_URI, neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD));
 
 //Queries
@@ -100,7 +101,7 @@ async function registerUser(parameters) {
             IDP: $idp,
             organization: $organization,
             userID: $userID,
-            registrationDate: $registrationDate,
+            registrationDate: '${getTimeNow()}',
             status: $status,
             acl: $acl,
             role: $role
