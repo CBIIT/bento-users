@@ -1,11 +1,11 @@
 module.exports = Object.freeze({
     // user status
-    REQUESTED: 'requested',
-    APPROVED: 'approved',
-    REJECTED: 'rejected',
-    REVOKED: 'revoked',
+    NONE: '',
+    INACTIVE: 'inactive',
+    DISABLED: 'disabled',
+    DELETED: 'deleted',
     // user role
-    STANDARD: 'standard',
+    ADMIN: 'admin',
     MEMBER: 'member',
     NON_MEMBER: 'non-member'
 });

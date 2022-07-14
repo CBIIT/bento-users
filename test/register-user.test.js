@@ -28,7 +28,7 @@ describe('register user API test', () => {
     registerUserService.mockReturnValue(Promise.resolve({firstName: 'test', lastName: 'test'}));
     checkUnique.mockReturnValue(Promise.resolve(true));
 
-    test.concurrent('/register without notification test', async () => {
+    test('/register without notification test', async () => {
         let params = JSON.parse(JSON.stringify(parameters));
         params.isNotify = false;
         await registerUser(params);
@@ -53,7 +53,7 @@ describe('register user API test', () => {
         expect(result.message).toBe(errorName.NOT_UNIQUE);
     });
 
-    test.concurrent('/register with notification test', async () => {
+    test('/register with notification test', async () => {
         await registerUser(parameters);
         setImmediate(()=>{
             expect(sendAdminNotification).toBeCalledTimes(1);

@@ -1,5 +1,5 @@
 const UserBuilder = require("../model/user");
-const {STANDARD, REQUESTED} = require("../constants/user-constant");
+const {MEMBER, NONE} = require("../constants/user-constant");
 
 describe('User Class Test', () => {
     const firstName = 'first';
@@ -19,8 +19,8 @@ describe('User Class Test', () => {
     test('/user create', () => {
 
         const acl = ['a', 'b', 'c'];
-        const role = STANDARD;
-        const status = REQUESTED;
+        const role = MEMBER;
+        const status = NONE;
         const organization = 'test-research';
 
         const user = new UserBuilder(firstName, lastName, email, idp)
