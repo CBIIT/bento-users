@@ -1,0 +1,46 @@
+Nodes:
+  User:
+    Props:
+      - userID
+      - firstName
+      - lastName
+      - email
+      - IDP
+      - role
+      - organization
+      - userStatus
+      - creationDate
+      - editDate
+  Access:
+    Props:
+      - userID
+      - armID
+      - accessStatus
+      - requestID
+      - approvedBy
+      - requestDate
+      - reviewDate
+      - comment
+  Arm:
+    Props:
+      - armID
+      - armName
+Relationships:
+  of_user:
+    Mul: many_to_one
+    Ends:
+      - Src: Access
+        Dst: User
+    Props: null
+  of_arm:
+    Mul: many_to_one
+    Ends:
+      - Src: Access
+        Dst: Arm
+    Props: null
+  approved_by:
+    Mul: many_to_one
+    Ends:
+      - Src: Access
+        Dst: User
+    Props: null

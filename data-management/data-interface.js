@@ -49,6 +49,26 @@ const getMyUser = async (_, context) => {
     return await execute(task);
 }
 
+const getUser = async (parameters, context) => {
+    try {
+        let userInfo = context.userInfo;
+        if (!verifyUserInfo(userInfo)){
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
+        //Check if not admin
+        if (!await checkAdminPermissions(userInfo)) {
+            return new Error(errorName.NOT_AUTHORIZED);
+        }
+        //Execute query
+        else {
+            let result =  await neo4j.getUser(parameters);
+            return result;
+        }
+    } catch (err) {
+        return err;
+    }
+}
+
 const listUsers = async (input, context) => {
     try {
         let userInfo = context.userInfo;
@@ -80,7 +100,7 @@ const listArms = async (input, context) => {
     }
 }
 
-const inspectValidUser = async (parameters)=> {
+const inspectValidUser = (parameters)=> {
     if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.idp) {
         let idp = parameters.userInfo.idp;
         if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
@@ -92,7 +112,7 @@ const inspectValidUser = async (parameters)=> {
 const registerUser = async (parameters, _) => {
     formatParams(parameters.userInfo);
     const task = async () => {
-        await inspectValidUser(parameters);
+        inspectValidUser(parameters);
         if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
         let generatedInfo = {
@@ -307,6 +327,7 @@ function verifyUserInfo(userInfo) {
 
 module.exports = {
     getMyUser: getMyUser,
+    getUser: getUser,
     listUsers: listUsers,
     registerUser: registerUser,
     approveUser: approveUser,
