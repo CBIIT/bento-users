@@ -4,7 +4,7 @@ const {errorName, valid_idps} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification
 } = require("./notifications");
-const {STANDARD, REQUESTED} = require("../constants/user-constant");
+const {REQUESTED, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 
@@ -118,7 +118,7 @@ const registerUser = async (parameters, _) => {
         let generatedInfo = {
             userID: v4(),
             status: REQUESTED,
-            role: STANDARD
+            role: NON_MEMBER
         };
         let registrationInfo = {
             ...parameters.userInfo,
