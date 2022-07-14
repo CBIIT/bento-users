@@ -99,15 +99,38 @@ async function listUsers(parameters) {
     const cypher =
     `
         MATCH (user:User)
-        WHERE user.role IN $role AND user.status IN $status
-        return user 
+        WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, request, reviewer, arm
+        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
     `
     const users = []
     const result = await executeQuery(parameters, cypher, 'user');
-    result.forEach(x => {
-        users.push(x.properties)
-    });
-    return users;
+    return result;
 }
 
 async function listArms(parameters) {

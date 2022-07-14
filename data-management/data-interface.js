@@ -65,8 +65,12 @@ const getUser = async (parameters, context) => {
 const listUsers = async (input, context) => {
     try {
         let userInfo = context.userInfo;
+        //Check logged in
+        if (!verifyUserInfo(userInfo)){
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
         //Check if not admin
-        if (!await checkAdminPermissions(userInfo)) {
+        else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         //Execute query
