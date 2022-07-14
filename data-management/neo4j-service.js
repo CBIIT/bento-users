@@ -138,7 +138,7 @@ async function registerUser(parameters) {
             userID: $userID,
             creationDate: '${getTimeNow()}',
             editDate: '',
-            status: $status,
+            userStatus: $status,
             acl: $acl,
             role: $role
         }) 

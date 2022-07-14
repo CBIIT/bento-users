@@ -11,7 +11,7 @@ type User {
     "admin, member (has ever been granted any accesses), non-member (never granted any access)"
     role: String
     "null (login only), inactive (all accesses revoked), active, disabled, deleted"
-    status: String
+    userStatus: String
 
     creationDate: String
     editDate: String
