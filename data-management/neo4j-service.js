@@ -64,15 +64,16 @@ async function listUsers(parameters) {
     const cypher =
     `
         MATCH (user:User)
-        WHERE user.role IN $role AND user.userStatus IN $userStatus
-        MATCH (user)<-[:of_user]-(request:Access)
-        WHERE request.accessStatus IN $accessStatus
+        WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, request, reviewer, arm
+        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
         WITH user, COLLECT(DISTINCT request{
             armID: arm.armID,
             armName: arm.armName,
-            status: request.accessStatus,
+            accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
             reviewDate: request.reviewDate,
@@ -86,7 +87,7 @@ async function listUsers(parameters) {
             email: user.email,
             IDP: user.IDP,
             role: user.role,
-            status: user.userStatus,
+            userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
             acl: acl
