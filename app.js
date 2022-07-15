@@ -45,8 +45,19 @@ const errorHandler = function(err, req, res, next) {
 // Initialize app
 const app = express();
 // App configuration middleware
+var whitelist = ['http://localhost:3000', 'https://bento-dev.bento-tools.org']
 
-app.use(cors());
+var corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1) {
+          callback(null, true)
+        } else {
+          callback(new Error('Not allowed by CORS'))
+        }
+      },
+    credentials: true // <-- REQUIRED backend setting
+  };
+app.use(cors(corsOptions));
 
 // setup the logger
 app.use(logger('combined', { stream: accessLogStream }))
