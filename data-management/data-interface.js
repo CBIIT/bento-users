@@ -106,30 +106,43 @@ const listArms = async (input, context) => {
     }
 }
 
-const inspectValidUser = (parameters)=> {
-    if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.idp) {
-        let idp = parameters.userInfo.idp;
-        if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
+const inspectValidUserOrThrow = (parameters)=> {
+    if (validator.isValidLogin(parameters.userInfo)) {
+        validator.isValidIdpOrThrow(parameters.userInfo.idp);
     } else {
         throw new Error(errorName.MISSING_INPUTS);
     }
 }
 
 const validator = {
-    requestAccess: (p)=>{return !p.userInfo.firstName || !p.userInfo.lastName || !p.userInfo.armIDs},
-    invalidArm: (arms, armIDs) => {return arms.length != armIDs.length}
+    isValidReqArmInputOrThrow: (p)=>{
+        if (!p.userInfo.firstName || !p.userInfo.lastName || !p.userInfo.armIDs) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS)
+    },
+    isValidLogin: (userInfo) => {
+        return verifyUserInfo(userInfo);
+    },
+    isValidLoginOrThrow: (userInfo) => {
+        if (!verifyUserInfo(userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+    },
+    isValidArmOrThrow: (arms, armIDs) => {
+        if (arms.length === 0 || arms.length != armIDs.length) throw new Error(errorName.INVALID_REQUEST_ARM);
+    },
+    isValidIdpOrThrow: (idp)=> {
+        let copyIdp = idp.slice();
+        if (!isElementInArray(valid_idps, copyIdp)) throw new Error(errorName.INVALID_IDP)
+    }
 }
 
 async function requestAccess(parameters, context) {
-    if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
-    if (validator.requestAccess(parameters)) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS);
+    validator.isValidLoginOrThrow(context.userInfo);
+    validator.isValidReqArmInputOrThrow(parameters) ;
     const aUser = await neo4j.getMyUser(context.userInfo);
     parameters.userID = aUser.userID;
     parameters.userInfo.armIDs = getUniqueArr(parameters.userInfo.armIDs);
 
     // inspect request-arms in the existing arms
     const arms = await searchArms({armIDs: parameters.userInfo.armIDs},context);
-    if (validator.invalidArm(arms, parameters.userInfo.armIDs)) throw new Error(errorName.INVALID_REQUEST_ARM);
+    validator.isValidArmOrThrow(arms, parameters.userInfo.armIDs);
 
     // create request arm access
     const accessRequest = await addArmRequestAccess(parameters, context);
@@ -147,7 +160,7 @@ const searchArms = async (arrArm, _) => {
 
 const updateUserName = async (parameters, context) => {
     const task = async () => {
-        inspectValidUser(context);
+        inspectValidUserOrThrow(context);
         const user = UserBuilder.createUser(parameters.userInfo);
         let response = await neo4j.updateUserName(parameters, user)
         if (response) return response;
@@ -159,7 +172,7 @@ const updateUserName = async (parameters, context) => {
 const addArmRequestAccess = async (parameters, context) => {
     let userSession = JSON.parse(JSON.stringify(context));
     formatParams(userSession);
-    inspectValidUser(userSession);
+    inspectValidUserOrThrow(userSession);
     const task = async () => {
         const armAccess = ArmAccess.createRequestAccess(parameters.userID, parameters.userInfo.armIDs)
         const response = await neo4j.requestArmAccess(armAccess.getArmAccess());
@@ -178,7 +191,7 @@ const addArmRequestAccess = async (parameters, context) => {
 const registerUser = async (parameters, _) => {
     formatParams(parameters.userInfo);
     const task = async () => {
-        inspectValidUser(parameters);
+        inspectValidUserOrThrow(parameters);
         if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
         let generatedInfo = {

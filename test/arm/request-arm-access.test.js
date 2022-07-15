@@ -31,14 +31,14 @@ describe('arm access Test', () => {
         }};
 
     test('/test arm request with invalid idp', async () => {
-        searchArmsByListArm.mockReturnValue([]);
+        searchArmsByListArm.mockReturnValue(["arm"]);
         getMyUser.mockReturnValue(mockAccessResult);
         let parameters = {
             userID: 8,
             userInfo: {
                 firstName: 'Young',
                 lastName: 'Yoo',
-                armIDs: []
+                armIDs: ["arm"]
             }
         }
         let session = JSON.parse(JSON.stringify(fakeSession));
