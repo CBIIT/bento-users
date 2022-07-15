@@ -1,5 +1,6 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
+const {getTimeNow} = require("../util/time-util");
 const driver = neo4j.driver(config.NEO4J_URI, neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD));
 
 //Queries
@@ -60,19 +61,77 @@ async function getMyUser(parameters) {
     return;
 }
 
+async function getUser(parameters) {
+    const cypher =
+        `
+        MATCH (user:User)
+        WHERE user.userID = $userID
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            status: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            status: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
 async function listUsers(parameters) {
     const cypher =
     `
         MATCH (user:User)
-        WHERE user.role IN $role AND user.status IN $status
-        return user 
+        WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, request, reviewer, arm
+        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
     `
     const users = []
     const result = await executeQuery(parameters, cypher, 'user');
-    result.forEach(x => {
-        users.push(x.properties)
-    });
-    return users;
+    return result;
 }
 
 async function listArms(parameters) {
@@ -97,11 +156,12 @@ async function registerUser(parameters) {
             firstName: $firstName,
             lastName: $lastName,
             email: $email,
-            IDP: $IDP,
+            IDP: $idp,
             organization: $organization,
             userID: $userID,
-            registrationDate: $registrationDate,
-            status: $status,
+            creationDate: '${getTimeNow()}',
+            editDate: '',
+            userStatus: $status,
             acl: $acl,
             role: $role
         }) 
@@ -289,6 +349,7 @@ async function executeQuery(parameters, cypher, returnLabel) {
 
 //Exported functions
 exports.getMyUser = getMyUser
+exports.getUser = getUser
 exports.listUsers = listUsers
 exports.registerUser = registerUser
 exports.approveUser = approveUser

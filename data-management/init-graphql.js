@@ -17,6 +17,8 @@ const root = {
     editUser: data_interface.editUser,
     listArms: data_interface.listArms,
     updateMyUser: data_interface.updateMyUser
+    getUser: data_interface.getUser
+
     // The below functions are not fully tested and verified yet and should not be used
     // updateMyUser: data_interface.updateMyUser,
     // deleteUser: data_interface.deleteUser,

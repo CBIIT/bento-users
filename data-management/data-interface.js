@@ -4,6 +4,17 @@ const {errorName, valid_idps} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification
 } = require("./notifications");
+const {NONE, NON_MEMBER} = require("../constants/user-constant");
+const {isElementInArray} = require("../util/string-util");
+const UserBuilder = require("../model/user");
+
+async function execute(fn) {
+    try {
+        return await fn();
+    } catch (err) {
+        return err;
+    }
+}
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -24,29 +35,49 @@ async function checkAdminPermissions(userInfo) {
 }
 
 const getMyUser = async (_, context) => {
-    try{
+    const task = async () => {
+        if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+        let result = await neo4j.getMyUser(context.userInfo);
+        // store user if not exists in db
+        if (!result) {
+            const user = UserBuilder.createUser(context.userInfo);
+            // no email notification for auto-generated user
+            return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
+        }
+        return result;
+    }
+    return await execute(task);
+}
+
+const getUser = async (parameters, context) => {
+    try {
         let userInfo = context.userInfo;
         if (!verifyUserInfo(userInfo)){
             return new Error(errorName.NOT_LOGGED_IN);
         }
-        let result = await neo4j.getMyUser(userInfo);
-        if (!result){
-            return new Error(errorName.USER_NOT_FOUND);
+        //Check if not admin
+        if (!await checkAdminPermissions(userInfo)) {
+            return new Error(errorName.NOT_AUTHORIZED);
         }
+        //Execute query
         else {
+            let result =  await neo4j.getUser(parameters);
             return result;
         }
-    }
-    catch (err){
-        return err
+    } catch (err) {
+        return err;
     }
 }
 
 const listUsers = async (input, context) => {
     try {
         let userInfo = context.userInfo;
+        //Check logged in
+        if (!verifyUserInfo(userInfo)){
+            return new Error(errorName.NOT_LOGGED_IN);
+        }
         //Check if not admin
-        if (!await checkAdminPermissions(userInfo)) {
+        else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         //Execute query
@@ -73,48 +104,47 @@ const listArms = async (input, context) => {
     }
 }
 
-const registerUser = async (parameters, context) => {
-    formatParams(parameters.userInfo);
-    if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.IDP) {
-        let idp = parameters.userInfo.IDP;
-        if (!valid_idps.includes(idp.toLowerCase())){
-            return new Error(errorName.INVALID_IDP);
-        }
-        let unique = await checkUnique(parameters.userInfo.email, idp)
-        if (!unique) {
-            return new Error(errorName.NOT_UNIQUE);
-        }
+const inspectValidUser = (parameters)=> {
+    if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.idp) {
+        let idp = parameters.userInfo.idp;
+        if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
     } else {
-        return new Error(errorName.MISSING_INPUTS);
+        throw new Error(errorName.MISSING_INPUTS);
     }
-    try {
+}
+
+const registerUser = async (parameters, _) => {
+    formatParams(parameters.userInfo);
+    const task = async () => {
+        inspectValidUser(parameters);
+        if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
+
         let generatedInfo = {
             userID: v4(),
-            registrationDate: (new Date()).toString(),
-            status: "registered",
-            role: "standard"
+            status: NONE,
+            role: NON_MEMBER
         };
         let registrationInfo = {
             ...parameters.userInfo,
             ...generatedInfo
         };
         let response = await neo4j.registerUser(registrationInfo);
-        if (response) {
-            let adminEmails = await getAdminEmails();
-            let template_params = {
-                firstName: response.firstName,
-                lastName: response.lastName
-            }
-            await sendAdminNotification(adminEmails, template_params);
-            await sendRegistrationConfirmation(response.email, template_params)
-            return response;
+        const notify = (parameters.isNotify === false) ? parameters.isNotify: true;
+        if (response && notify) {
+            setImmediate(async () => {
+                let adminEmails = await getAdminEmails();
+                let template_params = {
+                    firstName: response.firstName,
+                    lastName: response.lastName
+                }
+                await sendAdminNotification(adminEmails, template_params);
+                await sendRegistrationConfirmation(response.email, template_params)
+            });
         }
-        else {
-            return new Error(errorName.UNABLE_TO_REGISTER_USER);
-        }
-    } catch (err) {
-        return err;
+        if (response) return response;
+        throw new Error(errorName.UNABLE_TO_REGISTER_USER);
     }
+    return await execute(task);
 }
 
 
@@ -317,6 +347,7 @@ function verifyUserInfo(userInfo) {
 
 module.exports = {
     getMyUser: getMyUser,
+    getUser: getUser,
     listUsers: listUsers,
     registerUser: registerUser,
     approveUser: approveUser,
