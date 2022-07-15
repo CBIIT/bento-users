@@ -171,24 +171,38 @@ async function registerUser(parameters) {
     return result[0].properties;
 }
 
-async function approveUser(parameters) {
+async function approveAccess(parameters) {
     const cypher =
-        `
+    `  
         MATCH (user:User)
-        WHERE 
-            user.userID = $userID
-        SET user.approvalDate = $approvalDate
-        SET user.role = $role
-        SET user.status = 'approved'
-        SET user.rejectionDate = Null
-        SET user.comment = Null
-        RETURN user
+        WHERE user.userID = $userID
+        MATCH (access:Access)-[:of_user]->(user)
+        WHERE access.armID IN $armIDs
+        MATCH (access)-[:of_arm]->(arm:Arm)
+        MATCH (reviewer:User)
+        WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
+        CREATE (access)-[:approved_by]->(reviewer)
+        SET access.accessStatus = 'approved'
+        SET access.approvedBy = reviewer.userID
+        SET access.reviewDate = $reviewDate
+        SET access.comment = $comment
+        WITH user, access, arm, reviewer,
+        CASE WHEN user.role = 'non-member' THEN 'member' ELSE user.role END AS userRole
+        SET user.role = userRole
+        WITH COLLECT(DISTINCT {
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: access.accessStatus,
+            requestDate: access.requestDate,
+            reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
+            reviewDate: access.reviewDate,
+            comment: access.comment
+        }) AS acl
+        RETURN acl    
     `
-    const result = await executeQuery(parameters, cypher, 'user');
-    if (result && result[0]) {
-        return result[0].properties;
-    }
-    return;
+    let accesses = [];
+    let result = await executeQuery(parameters, cypher, 'acl');
+    return result[0];
 }
 
 async function rejectUser(parameters) {
@@ -319,7 +333,7 @@ exports.getMyUser = getMyUser
 exports.getUser = getUser
 exports.listUsers = listUsers
 exports.registerUser = registerUser
-exports.approveUser = approveUser
+exports.approveAccess = approveAccess
 exports.rejectUser = rejectUser
 exports.editUser = editUser
 exports.wipeDatabase = wipeDatabase

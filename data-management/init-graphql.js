@@ -12,7 +12,7 @@ const root = {
     getMyUser: data_interface.getMyUser,
     listUsers: data_interface.listUsers,
     registerUser: data_interface.registerUser,
-    approveUser: data_interface.approveUser,
+    approveAccess: data_interface.approveAccess,
     rejectUser: data_interface.rejectUser,
     editUser: data_interface.editUser,
     listArms: data_interface.listArms,

@@ -7,6 +7,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray} = require("../util/string-util");
 const UserBuilder = require("../model/user");
+const config = require('../config');
 
 async function execute(fn) {
     try {
@@ -148,32 +149,24 @@ const registerUser = async (parameters, _) => {
 }
 
 
-const approveUser = async (parameters, context) => {
-    formatParams(parameters);
+const approveAccess = async (parameters, context) => {
     try {
         let userInfo = context.userInfo;
         if (!verifyUserInfo(userInfo)){
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else if (await neo4j.checkAlreadyApproved(parameters.userID)) {
-            return new Error(errorName.ALREADY_APPROVED);
-        } else if (!(parameters.role === 'admin' || parameters.role === 'standard')){
-            return new Error(errorName.INVALID_ROLE);
-        }
-        else {
-            parameters.approvalDate = (new Date()).toString()
-            let response = await neo4j.approveUser(parameters)
-            if (response) {
-                let template_params = {
-                    firstName: response.firstName,
-                    lastName: response.lastName
-                };
+        } else {
+            parameters.reviewDate = (new Date()).toString();
+            parameters.reviewerEmail = userInfo.email;
+            parameters.reviewerIDP = userInfo.idp;
+            let response = await neo4j.approveAccess(parameters)
+            if (config.emails_enabled && response) {
+                // todo implement email notification
                 await sendApprovalNotification(response.email, template_params);
                 return response;
-            } else {
-                return new Error(errorName.USER_NOT_FOUND);
             }
+            return response;
         }
     } catch (err) {
         return err;
@@ -287,58 +280,13 @@ function verifyUserInfo(userInfo) {
     return userInfo && userInfo.email && userInfo.idp;
 }
 
-// const updateMyUser = (input, context) => {
-//     try{
-//         let userInfo = context.session.userInfo;
-//         input.userInfo.email = userInfo.email;
-//         input.userInfo.editDate = (new Date()).toString();
-//         return neo4j.updateMyUser(input.userInfo);
-//     }
-//     catch (err) {
-//         return err;
-//     }
-// }
-// const deleteUser = (parameters, context) => {
-//     try{
-//         let userInfo = context.session.userInfo;
-//         if (checkAdminPermissions(userInfo)) {
-//             return neo4j.deleteUser(parameters)
-//         }
-//         else{
-//             new Error(errorName.NOT_AUTHORIZED)
-//         }
-//     }
-//     catch (err) {
-//         return err;
-//     }
-// }
-//
-// const disableUser = (parameters, context) => {
-//     try{
-//         let userInfo = context.session.userInfo;
-//         if (checkAdminPermissions(userInfo)) {
-//             return neo4j.disableUser(parameters)
-//         }
-//         else{
-//             new Error(errorName.NOT_AUTHORIZED)
-//         }
-//     }
-//     catch (err) {
-//         return err;
-//     }
-// }
-
-
 module.exports = {
     getMyUser: getMyUser,
     getUser: getUser,
     listUsers: listUsers,
     registerUser: registerUser,
-    approveUser: approveUser,
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
-    // updateMyUser: updateMyUser,
-    // deleteUser: deleteUser,
-    // disableUser: disableUser,
+    approveAccess: approveAccess
 }
