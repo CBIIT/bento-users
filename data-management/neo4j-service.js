@@ -149,6 +149,60 @@ async function listArms(parameters) {
 }
 
 //Mutations
+async function requestArmAccess(parameters) {
+    const arms = Array.isArray(parameters.armIds) ? parameters.armIds : [parameters.armIds];
+    const promises = arms.map(async (arm) => {
+        parameters.armID = arm;
+        const params = {...parameters, armID: arm};
+        const cypher =
+            `
+            MATCH (user:User) WHERE user.userID= $userID
+            OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
+            CREATE (user)<-[:of_user]-(access:Access {
+                armID: $armID,
+                accessStatus: $accessStatus,
+                reviewAdminName: '',
+                requestDate: '${getTimeNow()}',
+                reviewDate: '',
+                comment: '',
+                requestID: $requestID,
+                userID: user.userID
+            })-[:of_arm]->(arm)
+            RETURN access
+            `
+        return await executeQuery(params, cypher, 'access');
+    });
+    return await Promise.all(promises);
+}
+
+async function updateUserName(parameters,user) {
+    const cypher =
+        `
+        MATCH (user:User)
+        WHERE 
+            user.userID = $userID
+        SET user.firstName = '${user.getFirstName()}'
+        SET user.lastName = '${user.getLastName()}'
+        SET user.editDate = '${getTimeNow()}'
+        RETURN user
+    `
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0].properties;
+}
+
+async function searchArmsByListArm(parameters) {
+    const cypher =
+        `
+        MATCH (arm:Arm)
+        WHERE arm.armID IN $armIDs
+        return arm
+        `
+    const result = await executeQuery(parameters, cypher, 'arm');
+    const arms = [];
+    result.forEach(x => arms.push(x.properties));
+    return arms;
+}
+
 async function registerUser(parameters) {
     const cypher =
         `
@@ -329,6 +383,9 @@ exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
+exports.requestArmAccess = requestArmAccess
+exports.updateUserName = updateUserName
+exports.searchArmsByListArm = searchArmsByListArm;
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

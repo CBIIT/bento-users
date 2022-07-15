@@ -8,7 +8,10 @@ function isElementInArray(array, target) {
     return array.some((element) => element === target.toLowerCase());
 }
 
+const getUniqueArr = (arr) => {return (arr) ? arr.filter((v, i, a) => a.indexOf(v) === i) : []};
+
 module.exports = {
     isCaseInsensitiveEqual,
-    isElementInArray
+    isElementInArray,
+    getUniqueArr
 }

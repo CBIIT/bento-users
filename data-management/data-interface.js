@@ -5,8 +5,10 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification
 } = require("./notifications");
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
-const {isElementInArray} = require("../util/string-util");
+const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
+const ArmAccess = require("../model/arm-access");
+const {searchArmsByListArm} = require("./neo4j-service");
 
 async function execute(fn) {
     try {
@@ -111,6 +113,66 @@ const inspectValidUser = (parameters)=> {
     } else {
         throw new Error(errorName.MISSING_INPUTS);
     }
+}
+
+const validator = {
+    requestAccess: (p)=>{return !p.userInfo.firstName || !p.userInfo.lastName || !p.userInfo.armIDs},
+    invalidArm: (arms, armIDs) => {return arms.length != armIDs.length}
+}
+
+async function requestAccess(parameters, context) {
+    if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+    if (validator.requestAccess(parameters)) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS);
+    const aUser = await neo4j.getMyUser(context.userInfo);
+    parameters.userID = aUser.userID;
+    parameters.userInfo.armIDs = getUniqueArr(parameters.userInfo.armIDs);
+
+    // inspect request-arms in the existing arms
+    const arms = await searchArms({armIDs: parameters.userInfo.armIDs},context);
+    if (validator.invalidArm(arms, parameters.userInfo.armIDs)) throw new Error(errorName.INVALID_REQUEST_ARM);
+
+    // create request arm access
+    const accessRequest = await addArmRequestAccess(parameters, context);
+    if (accessRequest) {
+        await updateUserName(parameters, context);
+        return await neo4j.getUser(parameters);
+    }
+    throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+}
+
+const searchArms = async (arrArm, _) => {
+    const task = async () => { return await searchArmsByListArm(arrArm) };
+    return await execute(task);
+}
+
+const updateUserName = async (parameters, context) => {
+    const task = async () => {
+        inspectValidUser(context);
+        const user = UserBuilder.createUser(parameters.userInfo);
+        let response = await neo4j.updateUserName(parameters, user)
+        if (response) return response;
+        throw new Error(errorName.USER_NOT_FOUND);
+    }
+    return execute(await task);
+}
+
+const addArmRequestAccess = async (parameters, context) => {
+    let userSession = JSON.parse(JSON.stringify(context));
+    formatParams(userSession);
+    inspectValidUser(userSession);
+    const task = async () => {
+        const armAccess = ArmAccess.createRequestAccess(parameters.userID, parameters.userInfo.armIDs)
+        const response = await neo4j.requestArmAccess(armAccess.getArmAccess());
+        if (response) {
+            setImmediate(async () => {
+                // TODO send admin arm access notification
+                // TODO send user arm request notification
+            });
+        }
+        if (response) return response;
+        throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+    }
+    return await execute(task);
 }
 
 const registerUser = async (parameters, _) => {
@@ -338,6 +400,9 @@ module.exports = {
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
+    searchArms,
+    requestAccess,
+    updateUserName
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,
