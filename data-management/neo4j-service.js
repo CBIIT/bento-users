@@ -191,23 +191,35 @@ async function approveUser(parameters) {
     return;
 }
 
-async function rejectUser(parameters) {
+async function rejectAccess(parameters) {
     const cypher =
-        `
+        `  
         MATCH (user:User)
-        WHERE 
-            user.userID = $userID
-        SET user.rejectionDate = $rejectionDate
-        SET user.comment = $comment
-        SET user.status = 'rejected'
-        SET user.approvalDate = Null
-        RETURN user
+        WHERE user.userID = $userID
+        MATCH (access:Access)-[:of_user]->(user)
+        WHERE access.armID IN $armIDs
+        MATCH (access)-[:of_arm]->(arm:Arm)
+        MATCH (reviewer:User)
+        WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
+        CREATE (access)-[:approved_by]->(reviewer)
+        SET access.accessStatus = 'rejected'
+        SET access.approvedBy = reviewer.userID
+        SET access.reviewDate = $reviewDate
+        SET access.comment = $comment
+        WITH COLLECT(DISTINCT {
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: access.accessStatus,
+            requestDate: access.requestDate,
+            reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
+            reviewDate: access.reviewDate,
+            comment: access.comment
+        }) AS acl
+        RETURN acl    
     `
-    const result = await executeQuery(parameters, cypher, 'user');
-    if (result && result[0]) {
-        return result[0].properties;
-    }
-    return;
+    let accesses = [];
+    let result = await executeQuery(parameters, cypher, 'acl');
+    return result[0];
 }
 
 async function resetApproval(parameters) {
@@ -320,7 +332,7 @@ exports.getUser = getUser
 exports.listUsers = listUsers
 exports.registerUser = registerUser
 exports.approveUser = approveUser
-exports.rejectUser = rejectUser
+exports.rejectAccess = rejectAccess
 exports.editUser = editUser
 exports.wipeDatabase = wipeDatabase
 exports.checkUnique = checkUnique
