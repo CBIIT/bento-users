@@ -11,7 +11,7 @@ type User {
     "admin, member (has ever been granted any accesses), non-member (never granted any access)"
     role: String
     "empty string (login only), inactive (all accesses revoked), active, disabled, deleted"
-    status: String
+    userStatus: String
 
     creationDate: String
     editDate: String
@@ -23,7 +23,7 @@ type Access {
     armID: String
     armName: String
     "requested, approved, rejected, revoked"
-    status: String
+    accessStatus: String
     requestDate: String
     "Name of the admin who approved/rejected this access"
     reviewAdminName: String
@@ -51,7 +51,7 @@ type Arm {
 
 type Query {
     "Admin only"
-    listUsers(role: [String] = ["member"], status: [String] = ["active"], accessStatus: [String] = ["requested", "approved"]): [User]
+    listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [User]
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
@@ -66,9 +66,9 @@ type Mutation {
     updateMyUser (userInfo: UpdateUserInput!): User
 
     "Admin only operations"
-    approveAccess (userID: ID!, armID: String!): Access
-    rejectAccess (userID: ID!, armID: String!, comment: String!): Access
-    revokeAccess (userID: ID!, armID: String!, comment: String!): Access
+    approveAccess (userID: ID!, armIDs: [String]!, comment: String): [Access]
+    rejectAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
+    revokeAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
     editUser(userID: ID!, role: String, status: String): User
 #    deleteUser (userID: ID!): User
 #    disableUser (userID: ID!): User

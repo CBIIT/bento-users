@@ -1,0 +1,107 @@
+PropDefinitions:
+  #Property of User, Access
+  userID:
+    Desc: User unique identifier
+    Type: string
+    Req: true
+  #Property of User
+  firstName:
+    Desc: The user's first name
+    Type: string
+    Req: true
+  #Property of User
+  lastName:
+    Desc: The user's last name
+    Type: string
+    Req: true
+  #Property of User
+  email:
+    Desc: The user's email
+    Type: string
+    Req: true
+  #Property of User
+  IDP:
+    Desc: The identity provider of the user account
+    Type:
+      - "google"
+      - "NIH"
+      - "login.gov"
+      - "test-idp"
+    Req: true
+  #Property of User
+  role:
+    Desc: The role of the user account, determines API permissions
+    Type:
+      - "admin"
+      - "member"
+      - "non-member"
+    Req: true
+  #Property of User
+  organization:
+    Desc: The user's organization
+    Type: string
+    Req: true
+  #Property of User
+  userStatus:
+    Desc: The user's account status
+    Type:
+      - ""
+      - "inactive"
+      - "active"
+      - "disabled"
+      - "deleted"
+    Req: true
+  #Property of User
+  creationDate:
+    Desc: The date upon which the user account was created
+    Type: datetime
+    Req: true
+  #Property of User
+  editDate:
+    Desc: The date upon which the user account was edited
+    Type: datetime
+    Req: false
+  #Property of Arm, Access
+  armID:
+    Desc: Arm unique identifier
+    Type: string
+    Req: true
+  #Property of Arm
+  armName:
+    Desc: The name of the arm
+    Type: string
+    Req: true
+  #Property of Access
+  accessStatus:
+    Desc: The status of the arm access request
+    Type:
+      - "requested"
+      - "approved"
+      - "rejected"
+      - "revoked"
+    Req: true
+  #Property of Access
+  request_id:
+    Desc: Access request unique identifier
+    Type: string
+    Req: true
+  #Property of Access
+  approvedBy:
+    Desc: Unique identifier of the user who approved the access request
+    Type: string
+    Req: false
+  #Property of Access
+  requestDate:
+    Desc: The date and time upon which the access request was created
+    Type: datetime
+    Req: true
+  #Property of Access
+  reviewDate:
+    Desc: The date and time upon which the access request was reviewed
+    Type: datetime
+    Req: false
+  #Property of Access
+  comment:
+    Desc: A comment explaining the result of the review
+    Type: datetime
+    Req: false
