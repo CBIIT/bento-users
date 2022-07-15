@@ -246,7 +246,7 @@ async function editUser(parameters) {
         WITH user, COLLECT(DISTINCT request{
             armID: arm.armID,
             armName: arm.armName,
-            status: request.accessStatus,
+            accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
             reviewDate: request.reviewDate,
@@ -260,7 +260,7 @@ async function editUser(parameters) {
             email: user.email,
             IDP: user.IDP,
             role: user.role,
-            status: user.userStatus,
+            userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
             acl: acl
@@ -272,10 +272,10 @@ async function editUser(parameters) {
             SET user.role = $role
         `
     }
-    if (parameters.status === "" || parameters.status) {
+    if (parameters.userStatus === "" || parameters.userStatus) {
         cypher = cypher +
         `
-            SET user.userStatus = $status
+            SET user.userStatus = $userStatus
         `
     }
     cypher = cypher + cypher_return;

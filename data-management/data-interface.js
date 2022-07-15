@@ -225,7 +225,7 @@ const editUser = async (parameters, context) => {
             if (parameters.role && !user_roles.includes(parameters.role)) {
                 return new Error(errorName.INVALID_ROLE);
             }
-            if (parameters.status !== "" && parameters.status && !user_statuses.includes(parameters.status)) {
+            if (parameters.userStatus !== "" && parameters.userStatus && !user_statuses.includes(parameters.userStatus)) {
                 return new Error(errorName.INVALID_STATUS);
             }
             parameters.editDate = (new Date()).toString();
@@ -254,8 +254,11 @@ function formatParams(params){
     if (params.role){
         params.role = params.role.toLowerCase();
     }
-    if (params.status){
-        params.status = params.status.toLowerCase();
+    if (params.userStatus){
+        params.userStatus = params.userStatus.toLowerCase();
+    }
+    if (params.accessStatus){
+        params.accessStatus = params.accessStatus.toLowerCase();
     }
 }
 
