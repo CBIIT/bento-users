@@ -163,7 +163,7 @@ const approveAccess = async (parameters, context) => {
             let response = await neo4j.approveAccess(parameters)
             if (config.emails_enabled && response) {
                 // todo implement email notification
-                await sendApprovalNotification(response.email, template_params);
+                // await sendApprovalNotification(response.email, template_params);
                 return response;
             }
             return response;
