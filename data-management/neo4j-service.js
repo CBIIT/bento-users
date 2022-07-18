@@ -188,7 +188,6 @@ async function registerUser(parameters) {
             creationDate: '${getTimeNow()}',
             editDate: '',
             userStatus: $status,
-            acl: $acl,
             role: $role
         }) 
         RETURN user
