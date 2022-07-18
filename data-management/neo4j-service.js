@@ -230,20 +230,57 @@ async function resetApproval(parameters) {
 }
 
 async function editUser(parameters) {
-    const cypher =
+    let cypher =
         `
         MATCH (user:User)
         WHERE 
             user.userID = $userID
-        SET user.role = $role
-        SET user.organization = $organization
-        SET user.acl = $acl
         SET user.editDate = $editDate
-        SET user.comment = $comment
-        RETURN user
-    `
+        `;
+    const cypher_return =
+        `
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `;
+    if (parameters.role) {
+        cypher = cypher +
+        `
+            SET user.role = $role
+        `
+    }
+    if (parameters.userStatus === "" || parameters.userStatus) {
+        cypher = cypher +
+        `
+            SET user.userStatus = $userStatus
+        `
+    }
+    cypher = cypher + cypher_return;
     const result = await executeQuery(parameters, cypher, 'user');
-    return result[0].properties;
+    return result[0];
 }
 
 // async function updateMyUser(parameters) {

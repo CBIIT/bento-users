@@ -10,7 +10,7 @@ type User {
     IDP: String
     "admin, member (has ever been granted any accesses), non-member (never granted any access)"
     role: String
-    "null (login only), inactive (all accesses revoked), active, disabled, deleted"
+    "empty string (login only), inactive (all accesses revoked), active, disabled, deleted"
     userStatus: String
 
     creationDate: String
@@ -69,7 +69,7 @@ type Mutation {
     approveAccess (userID: ID!, armIDs: [String]!, comment: String): [Access]
     rejectAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
     revokeAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
-    editUser(userID: ID!, role: String, status: String): User
+    editUser(userID: ID!, role: String, userStatus: String): User
 #    deleteUser (userID: ID!): User
 #    disableUser (userID: ID!): User
 }
