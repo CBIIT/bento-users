@@ -106,6 +106,7 @@ async function listUsers(parameters) {
         MATCH (user:User)
         WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        WITH user, request
         WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
