@@ -273,10 +273,36 @@ async function updateMyUser(parameters) {
     }
     cypher = cypher +
         `
-        RETURN user
+        SET user.editDate = $editDate
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(access)
+        WITH user, COLLECT(DISTINCT access{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: access.accessStatus,
+            requestDate: access.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: access.reviewDate,
+            comment: access.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
         `;
     const result = await executeQuery(parameters, cypher, 'user');
-    return result[0].properties;
+    return result[0];
 }
 
 // async function updateMyUser(parameters) {

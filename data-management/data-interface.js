@@ -280,6 +280,7 @@ const updateMyUser = async (parameters, context) => {
         }
         else{
             parameters = {...userInfo, ...parameters.userInfo};
+            parameters.editDate = (new Date()).toString()
             return await neo4j.updateMyUser(parameters, userInfo);
         }
     } catch (err) {
