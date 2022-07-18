@@ -279,7 +279,7 @@ const updateMyUser = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         }
         else{
-            parameters = {...parameters.userInfo, ...userInfo};
+            parameters = {...userInfo, ...parameters.userInfo};
             return await neo4j.updateMyUser(parameters, userInfo);
         }
     } catch (err) {
