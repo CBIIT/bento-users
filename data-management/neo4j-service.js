@@ -308,6 +308,65 @@ async function editUser(parameters) {
     return result[0];
 }
 
+async function updateMyUser(parameters) {
+    let cypher =
+        `
+        MATCH (user:User)
+        WHERE
+            user.email = $email AND user.IDP = $idp
+        `;
+    if (parameters.firstName) {
+        cypher = cypher +
+            `
+            SET user.firstName = $firstName
+            `;
+    }
+    if (parameters.lastName) {
+        cypher = cypher +
+            `
+            SET user.lastName = $lastName
+            `;
+    }
+    if (parameters.organization) {
+        cypher = cypher +
+            `
+            SET user.organization = $organization
+            `;
+    }
+    cypher = cypher +
+        `
+        SET user.editDate = $editDate
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(access)
+        WITH user, COLLECT(DISTINCT access{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: access.accessStatus,
+            requestDate: access.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: access.reviewDate,
+            comment: access.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `;
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -391,6 +450,7 @@ exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
+exports.updateMyUser = updateMyUser
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
