@@ -1,7 +1,11 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
-const driver = neo4j.driver(config.NEO4J_URI, neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD));
+const driver = neo4j.driver(
+    config.NEO4J_URI,
+    neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
+    {disableLosslessIntegers: true}
+);
 
 //Queries
 async function getAdminEmails() {
@@ -102,11 +106,12 @@ async function listUsers(parameters) {
         MATCH (user:User)
         WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        WITH user, request
+        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, request, reviewer, arm
-        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
-        WITH user, COLLECT(DISTINCT request{
+        WITH user, COUNT(DISTINCT request) AS numberOfArms, user.lastName + ', ' + user.firstName AS displayName,
+        COLLECT(DISTINCT request{
             armID: arm.armID,
             armName: arm.armName,
             accessStatus: request.accessStatus,
@@ -118,6 +123,7 @@ async function listUsers(parameters) {
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
+            displayName: displayName,
             organization: user.organization,
             userID: user.userID,
             email: user.email,
@@ -126,12 +132,11 @@ async function listUsers(parameters) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
+            numberOfArms: numberOfArms,
             acl: acl
         } AS user
     `
-    const users = []
-    const result = await executeQuery(parameters, cypher, 'user');
-    return result;
+    return await executeQuery(parameters, cypher, 'user');
 }
 
 async function listArms(parameters) {
