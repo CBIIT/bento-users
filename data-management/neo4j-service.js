@@ -1,7 +1,11 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
-const driver = neo4j.driver(config.NEO4J_URI, neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD));
+const driver = neo4j.driver(
+    config.NEO4J_URI,
+    neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
+    {disableLosslessIntegers: true}
+);
 
 //Queries
 async function getAdminEmails() {
@@ -52,13 +56,34 @@ async function getMyUser(parameters) {
         `
         MATCH (user:User)
         WHERE user.email = $email AND user.IDP = $idp
-        return user
-    `
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `
     const result = await executeQuery(parameters, cypher, 'user');
-    if (result && result[0]) {
-        return result[0].properties;
-    }
-    return;
+    return result[0];
 }
 
 async function getUser(parameters) {
@@ -102,11 +127,12 @@ async function listUsers(parameters) {
         MATCH (user:User)
         WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        WITH user, request
+        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, request, reviewer, arm
-        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
-        WITH user, COLLECT(DISTINCT request{
+        WITH user, COUNT(DISTINCT request) AS numberOfArms, user.lastName + ', ' + user.firstName AS displayName,
+        COLLECT(DISTINCT request{
             armID: arm.armID,
             armName: arm.armName,
             accessStatus: request.accessStatus,
@@ -118,6 +144,7 @@ async function listUsers(parameters) {
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
+            displayName: displayName,
             organization: user.organization,
             userID: user.userID,
             email: user.email,
@@ -126,12 +153,11 @@ async function listUsers(parameters) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
+            numberOfArms: numberOfArms,
             acl: acl
         } AS user
     `
-    const users = []
-    const result = await executeQuery(parameters, cypher, 'user');
-    return result;
+    return await executeQuery(parameters, cypher, 'user');
 }
 
 async function listArms(parameters) {
@@ -284,20 +310,57 @@ async function resetApproval(parameters) {
 }
 
 async function editUser(parameters) {
-    const cypher =
+    let cypher =
         `
         MATCH (user:User)
         WHERE 
             user.userID = $userID
-        SET user.role = $role
-        SET user.organization = $organization
-        SET user.acl = $acl
         SET user.editDate = $editDate
-        SET user.comment = $comment
-        RETURN user
-    `
+        `;
+    const cypher_return =
+        `
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `;
+    if (parameters.role) {
+        cypher = cypher +
+        `
+            SET user.role = $role
+        `
+    }
+    if (parameters.userStatus === "" || parameters.userStatus) {
+        cypher = cypher +
+        `
+            SET user.userStatus = $userStatus
+        `
+    }
+    cypher = cypher + cypher_return;
     const result = await executeQuery(parameters, cypher, 'user');
-    return result[0].properties;
+    return result[0];
 }
 
 // async function updateMyUser(parameters) {

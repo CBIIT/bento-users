@@ -10,12 +10,35 @@ type User {
     IDP: String
     "admin, member (has ever been granted any accesses), non-member (never granted any access)"
     role: String
+    "empty string (login only), inactive (all accesses revoked), active, disabled, deleted"
+    userStatus: String
+
+    creationDate: String
+    editDate: String
+
+    acl: [Access]
+}
+
+type UserInfo {
+    "User entered properties"
+    firstName: String
+    lastName: String
+    displayName: String
+    organization: String
+
+    "System determined properties"
+    userID: ID
+    email: String
+    IDP: String
+    "admin, member (has ever been granted any accesses), non-member (never granted any access)"
+    role: String
     "null (login only), inactive (all accesses revoked), active, disabled, deleted"
     userStatus: String
 
     creationDate: String
     editDate: String
 
+    numberOfArms: Int
     acl: [Access]
 }
 
@@ -51,7 +74,7 @@ type Arm {
 
 type Query {
     "Admin only"
-    listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [User]
+    listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [UserInfo]
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
@@ -69,7 +92,7 @@ type Mutation {
     approveAccess (userID: ID!, armIDs: [String]!, comment: String): [Access]
     rejectAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
     revokeAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
-    editUser(userID: ID!, role: String, status: String): User
+    editUser(userID: ID!, role: String, userStatus: String): User
 #    deleteUser (userID: ID!): User
 #    disableUser (userID: ID!): User
 }
