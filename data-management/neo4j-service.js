@@ -164,14 +164,12 @@ async function listArms(parameters) {
     const cypher =
     `
         MATCH (arm: Arm)
-        RETURN arm AS arms
+        RETURN {
+            id: arm.armID,
+            name: arm.armName
+        } AS arms
     `
-    const arms = []
-    const result = await executeQuery(parameters, cypher, 'arms');
-    result.forEach(x => {
-        arms.push(x.properties)
-    });
-    return arms;
+    return await executeQuery(parameters, cypher, 'arms');
 }
 
 //Mutations
