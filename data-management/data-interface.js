@@ -27,7 +27,7 @@ async function getAdminEmails(){
 async function checkAdminPermissions(userInfo) {
     let result = await neo4j.getMyUser(userInfo);
     try{
-        return result.role === 'admin';
+        return result.role === 'admin' && result.userStatus === 'active';
     }
     catch (err){
         return false;
