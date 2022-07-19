@@ -16,6 +16,7 @@ const root = {
     rejectUser: data_interface.rejectUser,
     editUser: data_interface.editUser,
     listArms: data_interface.listArms,
+    updateMyUser: data_interface.updateMyUser,
     getUser: data_interface.getUser,
     requestAccess: data_interface.requestAccess
     // The below functions are not fully tested and verified yet and should not be used

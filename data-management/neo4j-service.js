@@ -164,14 +164,12 @@ async function listArms(parameters) {
     const cypher =
     `
         MATCH (arm: Arm)
-        RETURN arm AS arms
+        RETURN {
+            id: arm.armID,
+            name: arm.armName
+        } AS arms
     `
-    const arms = []
-    const result = await executeQuery(parameters, cypher, 'arms');
-    result.forEach(x => {
-        arms.push(x.properties)
-    });
-    return arms;
+    return await executeQuery(parameters, cypher, 'arms');
 }
 
 //Mutations
@@ -242,7 +240,6 @@ async function registerUser(parameters) {
             creationDate: '${getTimeNow()}',
             editDate: '',
             userStatus: $status,
-            acl: $acl,
             role: $role
         }) 
         RETURN user
@@ -363,6 +360,65 @@ async function editUser(parameters) {
     return result[0];
 }
 
+async function updateMyUser(parameters) {
+    let cypher =
+        `
+        MATCH (user:User)
+        WHERE
+            user.email = $email AND user.IDP = $idp
+        `;
+    if (parameters.firstName) {
+        cypher = cypher +
+            `
+            SET user.firstName = $firstName
+            `;
+    }
+    if (parameters.lastName) {
+        cypher = cypher +
+            `
+            SET user.lastName = $lastName
+            `;
+    }
+    if (parameters.organization) {
+        cypher = cypher +
+            `
+            SET user.organization = $organization
+            `;
+    }
+    cypher = cypher +
+        `
+        SET user.editDate = $editDate
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(access)
+        WITH user, COLLECT(DISTINCT access{
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: access.accessStatus,
+            requestDate: access.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: access.reviewDate,
+            comment: access.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `;
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -446,9 +502,10 @@ exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
+exports.updateMyUser = updateMyUser
 exports.requestArmAccess = requestArmAccess
 exports.updateUserName = updateUserName
-exports.searchArmsByListArm = searchArmsByListArm;
+exports.searchArmsByListArm = searchArmsByListArm
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
