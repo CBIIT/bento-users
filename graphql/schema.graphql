@@ -68,8 +68,8 @@ input UpdateUserInput {
 }
 
 type Arm {
-    armName: String
-    armID: String
+    name: String
+    id: String
 }
 
 type Query {
