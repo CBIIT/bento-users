@@ -210,7 +210,7 @@ async function approveAccess(parameters) {
         SET access.reviewDate = $reviewDate
         SET access.comment = $comment
         WITH user, access, arm, reviewer,
-        CASE WHEN user.status IN ["", 'inactive'] THEN 'active' ELSE user.userStatus END AS newStatus
+        CASE WHEN user.userStatus IN ["", "inactive"] THEN "active" ELSE user.userStatus END AS newStatus
         SET user.userStatus = newStatus
         WITH COLLECT(DISTINCT {
             armID: arm.armID,
