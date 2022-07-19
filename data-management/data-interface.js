@@ -409,10 +409,10 @@ module.exports = {
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
+    updateMyUser: updateMyUser,
     searchArms,
     requestAccess,
     updateUserName
-    // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }
