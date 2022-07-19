@@ -1,6 +1,6 @@
 const {updateUserName, requestAccess:reqArmAccess, searchArms} = require("../../data-management/data-interface");
 const {updateUserName:updateUserNameService,requestArmAccess: requestArmAccessService, getMyUser, getUser:getUserService,
-    searchArmsByListArm
+    searchValidRequestArm
 } = require("../../data-management/neo4j-service");
 const {sendArmAccessNotification, sendAdminNotification} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
@@ -31,7 +31,7 @@ describe('arm access Test', () => {
         }};
 
     test('/test arm request with invalid idp', async () => {
-        searchArmsByListArm.mockReturnValue(["arm"]);
+        searchValidRequestArm.mockReturnValue(["arm"]);
         getMyUser.mockReturnValue(mockAccessResult);
         let parameters = {
             userID: 8,
@@ -86,7 +86,7 @@ describe('arm access Test', () => {
         updateUserNameService.mockReturnValue(mockAccessResult);
         requestArmAccessService.mockReturnValue(Promise.resolve(mockAccessResult));
         getUserService.mockReturnValue(Promise.resolve(mockAccessResult));
-        searchArmsByListArm.mockReturnValue([1]);
+        searchValidRequestArm.mockReturnValue([1]);
         let parameters = {
             userInfo: {
                 firstName: 'Young',
@@ -140,7 +140,7 @@ describe('arm access Test', () => {
 
     // throw invalid arm access
     test('/throw invalid arm', async () => {
-        searchArmsByListArm.mockReturnValue([]);
+        searchValidRequestArm.mockReturnValue([]);
         getMyUser.mockReturnValue(mockAccessResult);
         let parameters = {
             userID: 8,

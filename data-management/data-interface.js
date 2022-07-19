@@ -8,7 +8,7 @@ const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const ArmAccess = require("../model/arm-access");
-const {searchArmsByListArm} = require("./neo4j-service");
+const {searchValidRequestArm} = require("./neo4j-service");
 
 async function execute(fn) {
     try {
@@ -153,8 +153,9 @@ async function requestAccess(parameters, context) {
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
 }
 
-const searchArms = async (arrArm, _) => {
-    const task = async () => { return await searchArmsByListArm(arrArm) };
+const searchArms = async (arrArm, context) => {
+    const user = UserBuilder.createUser(context.userInfo);
+    const task = async () => { return await searchValidRequestArm(arrArm, user); };
     return await execute(task);
 }
 

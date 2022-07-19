@@ -1,6 +1,7 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
+const {APPROVED, REQUESTED} = require("../constants/access-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -214,12 +215,17 @@ async function updateUserName(parameters,user) {
     return result[0].properties;
 }
 
-async function searchArmsByListArm(parameters) {
+// Searching for valid arms excluding approved or requested arm
+async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
-        MATCH (arm:Arm)
-        WHERE arm.armID IN $armIDs
-        return arm
+        MATCH (user:User)-[*..1]-(req:Access)-[*..1]-(userArm:Arm)
+        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in ['${REQUESTED}', '${APPROVED}']
+        WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
+        
+        MATCH (arm:Arm)<-[:of_arm]-(r:Access)
+        WHERE arm.armID IN $armIDs and not arm.armID in invalidArmIds
+        return DISTINCT arm
         `
     const result = await executeQuery(parameters, cypher, 'arm');
     const arms = [];
@@ -505,7 +511,7 @@ exports.listArms = listArms
 exports.updateMyUser = updateMyUser
 exports.requestArmAccess = requestArmAccess
 exports.updateUserName = updateUserName
-exports.searchArmsByListArm = searchArmsByListArm
+exports.searchValidRequestArm = searchValidRequestArm
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
