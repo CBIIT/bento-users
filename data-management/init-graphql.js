@@ -14,6 +14,7 @@ const root = {
     registerUser: data_interface.registerUser,
     approveUser: data_interface.approveUser,
     rejectUser: data_interface.rejectUser,
+    revokeAccess: data_interface.revokeAccess,
     editUser: data_interface.editUser,
     listArms: data_interface.listArms,
     getUser: data_interface.getUser

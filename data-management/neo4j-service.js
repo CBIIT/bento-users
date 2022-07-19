@@ -210,6 +210,45 @@ async function rejectUser(parameters) {
     return;
 }
 
+async function revokeAccess(parameters) {
+    const cypher =
+        `
+            MATCH (user:User)
+            WHERE user.userID = $userID
+            OPTIONAL MATCH (remaining:Access)-[:of_user]->(user)
+            WHERE NOT(remaining.armID IN $armIDs) AND remaining.accessStatus = 'approved'
+            WITH CASE 
+                WHEN COUNT(DISTINCT remaining) < 1
+                THEN 'inactive'
+                ELSE user.userStatus
+            END AS newStatus 
+            MATCH (reviewer:User)
+            WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
+            WITH newStatus, reviewer.firstName + " " + reviewer.lastName AS adminName, reviewer.userID AS adminID
+            MATCH (user:User)
+            WHERE user.userID = $userID 
+            MATCH (user)<-[:of_user]-(revoked:Access) 
+            WHERE revoked.armID IN $armIDs AND revoked.accessStatus = 'approved'
+            MATCH (arm:Arm)<-[:of_arm]-(revoked)
+            SET revoked.accessStatus = 'revoked'
+            SET revoked.reviewDate = $reviewDate
+            SET revoked.approvedBy = adminID
+            SET revoked.comment = $comment
+            SET user.userStatus = newStatus
+            RETURN COLLECT(DISTINCT revoked{
+                armID: arm.armID,
+                armName: arm.armName,
+                accessStatus: revoked.accessStatus,
+                requestDate: revoked.requestDate,
+                reviewAdminName: adminName,
+                reviewDate: revoked.reviewDate,
+                comment: revoked.comment
+            }) AS acl
+        `
+    let result =  await executeQuery(parameters, cypher, 'acl');
+    return result[0];
+}
+
 async function resetApproval(parameters) {
     const cypher =
         `
@@ -329,6 +368,7 @@ exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
+exports.revokeAccess = revokeAccess
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

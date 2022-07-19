@@ -7,6 +7,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray} = require("../util/string-util");
 const UserBuilder = require("../model/user");
+const config = require('../config');
 
 async function execute(fn) {
     try {
@@ -211,6 +212,31 @@ const rejectUser = async (parameters, context) => {
     }
 }
 
+const revokeAccess = async (parameters, context) => {
+    try{
+        let userInfo = context.userInfo;
+        if (!userInfo) {
+            return new Error(errorName.NOT_LOGGED_IN);
+        } else if (!await checkAdminPermissions(userInfo)) {
+            return new Error(errorName.NOT_AUTHORIZED);
+        }
+        else {
+            parameters.reviewDate = (new Date()).toString();
+            parameters.reviewerEmail = userInfo.email;
+            parameters.reviewerIDP = userInfo.idp;
+            let response = await neo4j.revokeAccess(parameters)
+            if (config.emails_enabled && response) {
+                // todo implement email notification
+                // await sendRevokedNotification(response.email, template_params);
+                return response;
+            }
+            return response;
+        }
+    } catch (err) {
+        return err;
+    }
+}
+
 
 const editUser = async (parameters, context) => {
     formatParams(parameters);
@@ -338,6 +364,7 @@ module.exports = {
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
+    revokeAccess: revokeAccess,
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,
