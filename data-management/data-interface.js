@@ -12,7 +12,7 @@ async function execute(fn) {
     try {
         return await fn();
     } catch (err) {
-        return err;
+        throw err;
     }
 }
 
@@ -31,6 +31,15 @@ async function checkAdminPermissions(userInfo) {
     }
     catch (err){
         return false;
+    }
+}
+
+const validator = {
+    isValidLoginOrThrow: (userInfo) => {
+        if (!verifyUserInfo(userInfo)) {
+            throw new Error(errorName.NOT_LOGGED_IN);
+        }
+
     }
 }
 
@@ -249,19 +258,8 @@ const editUser = async (parameters, context) => {
 
 const updateMyUser = async (parameters, context) => {
     formatParams(parameters);
-    try {
-        let userInfo = context.userInfo;
-        if (!userInfo) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        else{
-            parameters = {...userInfo, ...parameters.userInfo};
-            parameters.editDate = (new Date()).toString()
-            return await neo4j.updateMyUser(parameters, userInfo);
-        }
-    } catch (err) {
-        return err;
-    }
+    validator.isValidLoginOrThrow(context.userInfo);
+    return await neo4j.updateMyUser({...parameters.userInfo}, {...context.userInfo});
 }
 
 function formatParams(params){
