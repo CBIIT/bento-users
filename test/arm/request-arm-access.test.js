@@ -1,5 +1,5 @@
-const {updateUserName, requestAccess:reqArmAccess, searchArms} = require("../../data-management/data-interface");
-const {updateUserName:updateUserNameService,requestArmAccess: requestArmAccessService, getMyUser, getUser:getUserService,
+const {requestAccess:reqArmAccess} = require("../../data-management/data-interface");
+const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessService, getMyUser, getUser:getUserService,
     searchValidRequestArm
 } = require("../../data-management/neo4j-service");
 const {sendArmAccessNotification, sendAdminNotification} = require("../../data-management/notifications");
@@ -83,7 +83,7 @@ describe('arm access Test', () => {
         // sendArmAccessNotification.mockReturnValue(Promise.resolve());
         // sendAdminNotification.mockReturnValue(Promise.resolve());
         getMyUser.mockReturnValue(mockAccessResult);
-        updateUserNameService.mockReturnValue(mockAccessResult);
+        updateMyUserService.mockReturnValue(mockUserName);
         requestArmAccessService.mockReturnValue(Promise.resolve(mockAccessResult));
         getUserService.mockReturnValue(Promise.resolve(mockAccessResult));
         searchValidRequestArm.mockReturnValue([1]);
@@ -94,9 +94,8 @@ describe('arm access Test', () => {
                 armIDs: [1]
             }
         }
-
-        const result = await reqArmAccess(parameters,fakeSession);
-        expect(result).toBe(mockAccessResult);
+        // Return mock user
+        expect(await reqArmAccess(parameters,fakeSession)).toBe(mockUserName);
         // TODO
         // setImmediate(() => {
         //     expect(sendArmAccessNotification).toBeCalledTimes(1);
@@ -104,38 +103,17 @@ describe('arm access Test', () => {
         // });
     });
 
-    test('/update user name', async () => {
+    test('/test optional firstname & lastname updateMyUserService', async () => {
 
-        updateUserNameService.mockReturnValue(Promise.resolve(mockUserName));
+        updateMyUserService.mockReturnValue(Promise.resolve(mockUserName));
         let parameters = {
             userInfo : {
                 firstName: mockUserName.firstName,
-                lastName: mockUserName.lastName,
-                userID: 6
+                lastName: mockUserName.lastName
             }
         }
-        const result = await updateUserName(parameters, fakeSession);
+        const result = await updateMyUserService(parameters, fakeSession);
         expect(result).toBe(mockUserName);
-    });
-
-
-    test('/update user name & add request access', async () => {
-        let parameters = {
-            userInfo: {
-                armIDs: [100],
-                // name needs to send email
-                firstName: 'Young',
-                lastName: 'y',
-            }
-        }
-        updateUserNameService.mockReturnValue(Promise.resolve(mockUserName));
-        getMyUser.mockReturnValue(mockAccessResult);
-        const updateUserNameResult = await updateUserName(parameters, fakeSession);
-        expect(updateUserNameResult).toBe(mockUserName);
-
-        requestArmAccessService.mockReturnValue(Promise.resolve(mockAccessResult));
-        const resultAccessResult = await reqArmAccess(parameters, fakeSession);
-        expect(resultAccessResult).toBe(mockAccessResult);
     });
 
     // throw invalid arm access

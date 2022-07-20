@@ -184,35 +184,15 @@ async function requestArmAccess(parameters) {
             MATCH (user:User) WHERE user.userID= $userID
             OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
             CREATE (user)<-[:of_user]-(access:Access {
-                armID: $armID,
                 accessStatus: $accessStatus,
-                reviewAdminName: '',
                 requestDate: '${getTimeNow()}',
-                reviewDate: '',
-                comment: '',
-                requestID: $requestID,
-                userID: user.userID
+                requestID: $requestID
             })-[:of_arm]->(arm)
             RETURN access
             `
         return await executeQuery(params, cypher, 'access');
     });
     return await Promise.all(promises);
-}
-
-async function updateUserName(parameters,user) {
-    const cypher =
-        `
-        MATCH (user:User)
-        WHERE 
-            user.userID = $userID
-        SET user.firstName = '${user.getFirstName()}'
-        SET user.lastName = '${user.getLastName()}'
-        SET user.editDate = '${getTimeNow()}'
-        RETURN user
-    `
-    const result = await executeQuery(parameters, cypher, 'user');
-    return result[0].properties;
 }
 
 // Searching for valid arms excluding approved or requested arm
@@ -223,9 +203,10 @@ async function searchValidRequestArm(parameters, user) {
         WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in ['${REQUESTED}', '${APPROVED}']
         WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
         
-        MATCH (arm:Arm)<-[:of_arm]-(r:Access)
+        MATCH (arm:Arm)
         WHERE arm.armID IN $armIDs and not arm.armID in invalidArmIds
-        return DISTINCT arm
+        OPTIONAL MATCH (arm)<-[:of_arm]-(r:Access)
+        RETURN DISTINCT arm
         `
     const result = await executeQuery(parameters, cypher, 'arm');
     const arms = [];
@@ -366,34 +347,16 @@ async function editUser(parameters) {
     return result[0];
 }
 
-async function updateMyUser(parameters) {
-    let cypher =
+async function updateMyUser(parameters, user) {
+    const cypher =
         `
         MATCH (user:User)
         WHERE
-            user.email = $email AND user.IDP = $idp
-        `;
-    if (parameters.firstName) {
-        cypher = cypher +
-            `
-            SET user.firstName = $firstName
-            `;
-    }
-    if (parameters.lastName) {
-        cypher = cypher +
-            `
-            SET user.lastName = $lastName
-            `;
-    }
-    if (parameters.organization) {
-        cypher = cypher +
-            `
-            SET user.organization = $organization
-            `;
-    }
-    cypher = cypher +
-        `
-        SET user.editDate = $editDate
+            user.email = '${user.getEmail()}' AND user.IDP = '${user.getIDP()}'
+        ${parameters.firstName ? 'SET user.firstName = $firstName' : ''}
+        ${parameters.lastName ? 'SET user.lastName = $lastName' : ''}
+        ${parameters.organization ? 'SET user.organization = $organization' : ''}
+        SET user.editDate = '${getTimeNow()}'
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
@@ -510,7 +473,6 @@ exports.resetApproval = resetApproval
 exports.listArms = listArms
 exports.updateMyUser = updateMyUser
 exports.requestArmAccess = requestArmAccess
-exports.updateUserName = updateUserName
 exports.searchValidRequestArm = searchValidRequestArm
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser

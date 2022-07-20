@@ -8,7 +8,6 @@ const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const ArmAccess = require("../model/arm-access");
-const {searchValidRequestArm} = require("./neo4j-service");
 
 async function execute(fn) {
     try {
@@ -115,8 +114,8 @@ const inspectValidUserOrThrow = (parameters)=> {
 }
 
 const validator = {
-    isValidReqArmInputOrThrow: (p)=>{
-        if (!p.userInfo.firstName || !p.userInfo.lastName || !p.userInfo.armIDs) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS)
+    isValidReqArmInputOrThrow: (p)=> { // only a list of arm ids required
+        if (!p.userInfo.armIDs) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS)
     },
     isValidLogin: (userInfo) => {
         return verifyUserInfo(userInfo);
@@ -141,33 +140,19 @@ async function requestAccess(parameters, context) {
     parameters.userInfo.armIDs = getUniqueArr(parameters.userInfo.armIDs);
 
     // inspect request-arms in the existing arms
-    const arms = await searchArms({armIDs: parameters.userInfo.armIDs},context);
+    const arms = await searchValidReqArms({armIDs: parameters.userInfo.armIDs},context);
     validator.isValidArmOrThrow(arms, parameters.userInfo.armIDs);
 
     // create request arm access
     const accessRequest = await addArmRequestAccess(parameters, context);
-    if (accessRequest) {
-        await updateUserName(parameters, context);
-        return await neo4j.getUser(parameters);
-    }
+    if (accessRequest) return await updateMyUser(parameters, context);
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
 }
 
-const searchArms = async (arrArm, context) => {
+const searchValidReqArms = async (arrArm, context) => {
     const user = UserBuilder.createUser(context.userInfo);
-    const task = async () => { return await searchValidRequestArm(arrArm, user); };
+    const task = async () => { return await neo4j.searchValidRequestArm(arrArm, user); };
     return await execute(task);
-}
-
-const updateUserName = async (parameters, context) => {
-    const task = async () => {
-        inspectValidUserOrThrow(context);
-        const user = UserBuilder.createUser(parameters.userInfo);
-        let response = await neo4j.updateUserName(parameters, user)
-        if (response) return response;
-        throw new Error(errorName.USER_NOT_FOUND);
-    }
-    return execute(await task);
 }
 
 const addArmRequestAccess = async (parameters, context) => {
@@ -325,19 +310,12 @@ const editUser = async (parameters, context) => {
 
 const updateMyUser = async (parameters, context) => {
     formatParams(parameters);
-    try {
-        let userInfo = context.userInfo;
-        if (!userInfo) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        else{
-            parameters = {...userInfo, ...parameters.userInfo};
-            parameters.editDate = (new Date()).toString()
-            return await neo4j.updateMyUser(parameters, userInfo);
-        }
-    } catch (err) {
-        return err;
-    }
+    const task = async () => {
+        validator.isValidLoginOrThrow(context.userInfo);
+        const user = UserBuilder.createUser(context.userInfo);
+        return await neo4j.updateMyUser(parameters.userInfo, user);
+    };
+    return await execute(task);
 }
 
 function formatParams(params){
@@ -411,9 +389,8 @@ module.exports = {
     editUser: editUser,
     listArms: listArms,
     updateMyUser: updateMyUser,
-    searchArms,
-    requestAccess,
-    updateUserName
+    searchValidReqArms,
+    requestAccess
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }
