@@ -7,7 +7,6 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
-const ArmAccess = require("../model/arm-access");
 
 async function execute(fn) {
     try {
@@ -136,14 +135,14 @@ const inspectValidUserOrThrow = (parameters)=> {
 async function requestAccess(parameters, context) {
     validator.isValidLoginOrThrow(context.userInfo);
     validator.isValidReqArmInputOrThrow(parameters) ;
-    parameters.userInfo.armIDs = getUniqueArr(parameters.userInfo.armIDs);
 
+    const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);
     // inspect request-arms in the existing arms
-    const arms = await searchValidReqArms({armIDs: parameters.userInfo.armIDs}, context);
-    validator.isValidArmOrThrow(arms, parameters.userInfo.armIDs);
+    const arms = await searchValidReqArms({armIDs: reqArmIDs}, context);
+    validator.isValidArmOrThrow(arms, reqArmIDs);
 
     // create request arm access
-    const accessRequest = await addArmRequestAccess(parameters, context);
+    const accessRequest = await addArmRequestAccess(reqArmIDs, context);
     if (accessRequest) return await updateMyUser(parameters, context);
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
 }
@@ -153,12 +152,10 @@ const searchValidReqArms = async (arrArm, context) => {
     return await neo4j.searchValidRequestArm(arrArm, user);
 }
 
-const addArmRequestAccess = async (parameters, context) => {
+const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
     inspectValidUserOrThrow(context);
-
-    const armAccess = ArmAccess.createRequestAccess(parameters.userID, parameters.userInfo.armIDs)
-    const response = await neo4j.requestArmAccess(armAccess.getArmAccess(), context.userInfo);
+    const response = await neo4j.requestArmAccess(armIDs, context.userInfo);
     if (response) {
         setImmediate(async () => {
             // TODO send admin arm access notification
