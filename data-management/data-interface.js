@@ -5,8 +5,9 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification
 } = require("./notifications");
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
-const {isElementInArray} = require("../util/string-util");
+const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
+const ArmAccess = require("../model/arm-access");
 
 async function execute(fn) {
     try {
@@ -36,10 +37,20 @@ async function checkAdminPermissions(userInfo) {
 
 const validator = {
     isValidLoginOrThrow: (userInfo) => {
-        if (!verifyUserInfo(userInfo)) {
-            throw new Error(errorName.NOT_LOGGED_IN);
-        }
-
+        if (!verifyUserInfo(userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+    },
+    isValidLogin: (userInfo) => {
+        return verifyUserInfo(userInfo);
+    },
+    isValidArmOrThrow: (arms, armIDs) => {
+        if (arms.length === 0 || arms.length != armIDs.length) throw new Error(errorName.INVALID_REQUEST_ARM);
+    },
+    isValidIdpOrThrow: (idp)=> {
+        let copyIdp = idp.slice();
+        if (!isElementInArray(valid_idps, copyIdp)) throw new Error(errorName.INVALID_IDP)
+    },
+    isValidReqArmInputOrThrow: (p)=> { // only a list of arm ids required
+        if (!p.userInfo.armIDs) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS)
     }
 }
 
@@ -113,19 +124,57 @@ const listArms = async (input, context) => {
     }
 }
 
-const inspectValidUser = (parameters)=> {
-    if (parameters.userInfo && parameters.userInfo.email && parameters.userInfo.idp) {
-        let idp = parameters.userInfo.idp;
-        if (!isElementInArray(valid_idps, idp)) throw new Error(errorName.INVALID_IDP);
+const inspectValidUserOrThrow = (parameters)=> {
+    if (validator.isValidLogin(parameters.userInfo)) {
+        validator.isValidIdpOrThrow(parameters.userInfo.idp);
     } else {
         throw new Error(errorName.MISSING_INPUTS);
     }
 }
 
+
+async function requestAccess(parameters, context) {
+    validator.isValidLoginOrThrow(context.userInfo);
+    validator.isValidReqArmInputOrThrow(parameters) ;
+    const aUser = await neo4j.getMyUser(context.userInfo);
+    parameters.userID = aUser.userID;
+    parameters.userInfo.armIDs = getUniqueArr(parameters.userInfo.armIDs);
+
+    // inspect request-arms in the existing arms
+    const arms = await searchValidReqArms({armIDs: parameters.userInfo.armIDs},context);
+    validator.isValidArmOrThrow(arms, parameters.userInfo.armIDs);
+
+    // create request arm access
+    const accessRequest = await addArmRequestAccess(parameters, context);
+    if (accessRequest) return await updateMyUser(parameters, context);
+    throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+}
+
+const searchValidReqArms = async (arrArm, context) => {
+    const user = UserBuilder.createUser(context.userInfo);
+    return await neo4j.searchValidRequestArm(arrArm, user);
+}
+
+const addArmRequestAccess = async (parameters, context) => {
+    formatParams(context);
+    inspectValidUserOrThrow(context);
+
+    const armAccess = ArmAccess.createRequestAccess(parameters.userID, parameters.userInfo.armIDs)
+    const response = await neo4j.requestArmAccess(armAccess.getArmAccess());
+    if (response) {
+        setImmediate(async () => {
+            // TODO send admin arm access notification
+            // TODO send user arm request notification
+        });
+    }
+    if (response) return response;
+    throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+}
+
 const registerUser = async (parameters, _) => {
     formatParams(parameters.userInfo);
     const task = async () => {
-        inspectValidUser(parameters);
+        inspectValidUserOrThrow(parameters);
         if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
         let generatedInfo = {
@@ -332,7 +381,9 @@ module.exports = {
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
-    updateMyUser: updateMyUser
+    updateMyUser: updateMyUser,
+    searchValidReqArms,
+    requestAccess
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,
