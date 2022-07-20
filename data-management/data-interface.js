@@ -25,6 +25,11 @@ async function getAdminEmails(){
     return await neo4j.getAdminEmails();
 }
 
+async function validateInputArms(userID, accessList, accessStatuses) {
+    let existingAccess = await neo4j.getAccesses(userID, accessStatuses);
+    return accessList.every((a)=>existingAccess.includes(a))
+}
+
 async function checkAdminPermissions(userInfo) {
     let result = await neo4j.getMyUser(userInfo);
     try{
@@ -156,7 +161,10 @@ const approveAccess = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else {
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['requested', 'rejected', 'revoked'])){
+            return new Error(errorName.INVALID_REVIEW_ARMS);
+        }
+        else {
             parameters.reviewDate = (new Date()).toString();
             parameters.reviewerEmail = userInfo.email;
             parameters.reviewerIDP = userInfo.idp;

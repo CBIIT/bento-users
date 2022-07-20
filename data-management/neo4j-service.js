@@ -8,6 +8,20 @@ const driver = neo4j.driver(
 );
 
 //Queries
+async function getAccesses(userID, accessStatuses){
+    let parameters = {userID, accessStatuses};
+    const cypher =
+    `
+        MATCH (u:User)
+        WHERE u.userID = $userID
+        MATCH (a:Access)-[:of_user]->(u)
+        WHERE a.accessStatus IN $accessStatuses
+        RETURN COLLECT(DISTINCT a.armID) AS result
+    `
+    const result = await executeQuery(parameters, cypher, 'result');
+    return result[0];
+}
+
 async function getAdminEmails() {
     const cypher =
         `
@@ -210,8 +224,10 @@ async function approveAccess(parameters) {
         SET access.reviewDate = $reviewDate
         SET access.comment = $comment
         WITH user, access, arm, reviewer,
+        CASE WHEN user.role = "non-member" THEN "member" ELSE user.role END AS newRole,
         CASE WHEN user.userStatus IN ["", "inactive"] THEN "active" ELSE user.userStatus END AS newStatus
         SET user.userStatus = newStatus
+        SET user.role = newRole
         WITH COLLECT(DISTINCT {
             armID: arm.armID,
             armName: arm.armName,
@@ -223,7 +239,6 @@ async function approveAccess(parameters) {
         }) AS acl
         RETURN acl    
     `
-    let accesses = [];
     let result = await executeQuery(parameters, cypher, 'acl');
     return result[0];
 }
@@ -463,6 +478,7 @@ exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
 exports.updateMyUser = updateMyUser
+exports.getAccesses = getAccesses
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

@@ -4,6 +4,8 @@ exports.user_statuses = user_statuses = ['', 'inactive', 'active', 'disabled', '
 exports.access_statuses = access_statuses = ['requested', 'approved', 'rejected', 'revoked'];
 
 exports.errorName = {
+    INVALID_REVIEW_ARMS: "INVALID_REVIEW_ARMS",
+    INVALID_REVOKE_ARMS: "INVALID_REVOKE_ARMS",
     MISSING_INPUTS: "MISSING_INPUTS",
     INVALID_IDP: "INVALID_IDP",
     NOT_LOGGED_IN: "NOT_LOGGED_IN",
@@ -19,6 +21,14 @@ exports.errorName = {
 };
 
 exports.errorType = {
+    INVALID_REVIEW_ARMS: {
+        message: 'The armIDs parameter contains arm IDs that have either not been requested by this user or have already been approved, rejected, or revoked',
+        statusCode: 400
+    },
+    INVALID_REVOKE_ARMS: {
+        message: 'The armIDs parameter contains arm IDs that are not accessible to the specified user',
+        statusCode: 400
+    },
     MISSING_INPUTS: {
         message: "Inputs for email and IDP are required inputs for registration",
         statusCode: 400
