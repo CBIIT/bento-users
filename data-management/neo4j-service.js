@@ -175,14 +175,14 @@ async function listArms(parameters) {
 }
 
 //Mutations
-async function requestArmAccess(parameters) {
+async function requestArmAccess(parameters, userInfo) {
     const arms = Array.isArray(parameters.armIds) ? parameters.armIds : [parameters.armIds];
     const promises = arms.map(async (arm) => {
         parameters.armID = arm;
         const params = {...parameters, armID: arm};
         const cypher =
             `
-            MATCH (user:User) WHERE user.userID= $userID
+            MATCH (user:User) WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
             OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
             CREATE (user)<-[:of_user]-(access:Access {
                 accessStatus: $accessStatus,

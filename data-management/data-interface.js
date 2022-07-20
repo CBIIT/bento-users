@@ -136,12 +136,10 @@ const inspectValidUserOrThrow = (parameters)=> {
 async function requestAccess(parameters, context) {
     validator.isValidLoginOrThrow(context.userInfo);
     validator.isValidReqArmInputOrThrow(parameters) ;
-    const aUser = await neo4j.getMyUser(context.userInfo);
-    parameters.userID = aUser.userID;
     parameters.userInfo.armIDs = getUniqueArr(parameters.userInfo.armIDs);
 
     // inspect request-arms in the existing arms
-    const arms = await searchValidReqArms({armIDs: parameters.userInfo.armIDs},context);
+    const arms = await searchValidReqArms({armIDs: parameters.userInfo.armIDs}, context);
     validator.isValidArmOrThrow(arms, parameters.userInfo.armIDs);
 
     // create request arm access
@@ -160,7 +158,7 @@ const addArmRequestAccess = async (parameters, context) => {
     inspectValidUserOrThrow(context);
 
     const armAccess = ArmAccess.createRequestAccess(parameters.userID, parameters.userInfo.armIDs)
-    const response = await neo4j.requestArmAccess(armAccess.getArmAccess());
+    const response = await neo4j.requestArmAccess(armAccess.getArmAccess(), context.userInfo);
     if (response) {
         setImmediate(async () => {
             // TODO send admin arm access notification
