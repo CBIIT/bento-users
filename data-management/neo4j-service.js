@@ -306,34 +306,16 @@ async function editUser(parameters) {
     return result[0];
 }
 
-async function updateMyUser(parameters) {
-    let cypher =
+async function updateMyUser(parameters, user) {
+    const cypher =
         `
         MATCH (user:User)
         WHERE
-            user.email = $email AND user.IDP = $idp
-        `;
-    if (parameters.firstName) {
-        cypher = cypher +
-            `
-            SET user.firstName = $firstName
-            `;
-    }
-    if (parameters.lastName) {
-        cypher = cypher +
-            `
-            SET user.lastName = $lastName
-            `;
-    }
-    if (parameters.organization) {
-        cypher = cypher +
-            `
-            SET user.organization = $organization
-            `;
-    }
-    cypher = cypher +
-        `
-        SET user.editDate = $editDate
+            user.email = '${user.getEmail()}' AND user.IDP = '${user.getIDP()}'
+        ${parameters.firstName ? 'SET user.firstName = $firstName' : ''}
+        ${parameters.lastName ? 'SET user.lastName = $lastName' : ''}
+        ${parameters.organization ? 'SET user.organization = $organization' : ''}
+        SET user.editDate = '${getTimeNow()}'
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
