@@ -1,6 +1,7 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
+const {isUndefined} = require("../util/string-util");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -306,16 +307,16 @@ async function editUser(parameters) {
     return result[0];
 }
 
-async function updateMyUser(parameters, user) {
-    const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(!(p)));
+async function updateMyUser(parameters, userInfo) {
+    const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(isUndefined(p)));
     const cypher =
         `
         MATCH (user:User)
         WHERE
-            user.email = '${user.getEmail()}' AND user.IDP = '${user.getIDP()}'
-        ${parameters.firstName ? 'SET user.firstName = $firstName' : ''}
-        ${parameters.lastName ? 'SET user.lastName = $lastName' : ''}
-        ${parameters.organization ? 'SET user.organization = $organization' : ''}
+            user.email = '${userInfo.email}' AND user.IDP = '${userInfo.idp}'
+        ${!isUndefined(parameters.firstName) ? 'SET user.firstName = $firstName' : ''}
+        ${!isUndefined(parameters.lastName) ? 'SET user.lastName = $lastName' : ''}
+        ${!isUndefined(parameters.organization) ? 'SET user.organization = $organization' : ''}
         ${isRequiredTimeUpdate ? `SET user.editDate = '${getTimeNow()}'` : ''} 
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)

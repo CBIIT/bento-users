@@ -258,12 +258,8 @@ const editUser = async (parameters, context) => {
 
 const updateMyUser = async (parameters, context) => {
     formatParams(parameters);
-    const task = async () => {
-        validator.isValidLoginOrThrow(context.userInfo);
-        const user = UserBuilder.createUser(context.userInfo);
-        return await neo4j.updateMyUser(parameters.userInfo, user);
-    };
-    return await execute(task);
+    validator.isValidLoginOrThrow(context.userInfo);
+    return await neo4j.updateMyUser({...parameters.userInfo}, {...context.userInfo});
 }
 
 function formatParams(params){

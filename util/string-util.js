@@ -8,7 +8,12 @@ function isElementInArray(array, target) {
     return array.some((element) => element === target.toLowerCase());
 }
 
+const isUndefined = (p) => {
+    return p === undefined;
+}
+
 module.exports = {
     isCaseInsensitiveEqual,
-    isElementInArray
+    isElementInArray,
+    isUndefined
 }
