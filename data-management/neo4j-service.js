@@ -307,6 +307,7 @@ async function editUser(parameters) {
 }
 
 async function updateMyUser(parameters, user) {
+    const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(!(p)));
     const cypher =
         `
         MATCH (user:User)
@@ -315,7 +316,7 @@ async function updateMyUser(parameters, user) {
         ${parameters.firstName ? 'SET user.firstName = $firstName' : ''}
         ${parameters.lastName ? 'SET user.lastName = $lastName' : ''}
         ${parameters.organization ? 'SET user.organization = $organization' : ''}
-        SET user.editDate = '${getTimeNow()}'
+        ${isRequiredTimeUpdate ? `SET user.editDate = '${getTimeNow()}'` : ''} 
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
