@@ -238,8 +238,8 @@ async function revokeAccess(parameters) {
         `
             MATCH (user:User)
             WHERE user.userID = $userID
-            OPTIONAL MATCH (remaining:Access)-[:of_user]->(user)
-            WHERE NOT(remaining.armID IN $armIDs) AND remaining.accessStatus = 'approved'
+            OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(remaining:Access)-[:of_user]->(user)
+            WHERE NOT(arm.armID IN $armIDs) AND remaining.accessStatus = 'approved'
             WITH CASE 
                 WHEN COUNT(DISTINCT remaining) < 1
                 THEN 'inactive'
@@ -250,9 +250,8 @@ async function revokeAccess(parameters) {
             WITH newStatus, reviewer.firstName + " " + reviewer.lastName AS adminName, reviewer.userID AS adminID
             MATCH (user:User)
             WHERE user.userID = $userID 
-            MATCH (user)<-[:of_user]-(revoked:Access) 
-            WHERE revoked.armID IN $armIDs AND revoked.accessStatus = 'approved'
-            MATCH (arm:Arm)<-[:of_arm]-(revoked)
+            MATCH (arm:Arm)<-[:of_arm]-(revoked:Access)-[:of_user]->(user)
+            WHERE arm.armID IN $armIDs AND revoked.accessStatus = 'approved'
             SET revoked.accessStatus = 'revoked'
             SET revoked.reviewDate = $reviewDate
             SET revoked.approvedBy = adminID
