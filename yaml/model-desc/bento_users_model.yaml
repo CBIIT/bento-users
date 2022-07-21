@@ -13,8 +13,6 @@ Nodes:
       - editDate
   Access:
     Props:
-      - userID
-      - armID
       - accessStatus
       - requestID
       - approvedBy

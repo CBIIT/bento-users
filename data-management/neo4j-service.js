@@ -9,6 +9,20 @@ const driver = neo4j.driver(
 );
 
 //Queries
+async function getAccesses(userID, accessStatuses){
+    let parameters = {userID, accessStatuses};
+    const cypher =
+    `
+        MATCH (u:User)
+        WHERE u.userID = $userID
+        MATCH (arm:Arm)<-[:of_arm]-(a:Access)-[:of_user]->(u)
+        WHERE a.accessStatus IN $accessStatuses
+        RETURN COLLECT(DISTINCT arm.armID) AS result
+    `
+    const result = await executeQuery(parameters, cypher, 'result');
+    return result[0];
+}
+
 async function getAdminEmails() {
     const cypher =
         `
@@ -230,24 +244,38 @@ async function registerUser(parameters) {
     return result[0].properties;
 }
 
-async function approveUser(parameters) {
+async function approveAccess(parameters) {
     const cypher =
-        `
+    `  
         MATCH (user:User)
-        WHERE 
-            user.userID = $userID
-        SET user.approvalDate = $approvalDate
-        SET user.role = $role
-        SET user.status = 'approved'
-        SET user.rejectionDate = Null
-        SET user.comment = Null
-        RETURN user
+        WHERE user.userID = $userID
+        MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
+        WHERE arm.armID IN $armIDs
+        MATCH (reviewer:User)
+        WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
+        CREATE (access)-[:approved_by]->(reviewer)
+        SET access.accessStatus = 'approved'
+        SET access.approvedBy = reviewer.userID
+        SET access.reviewDate = $reviewDate
+        SET access.comment = $comment
+        WITH user, access, arm, reviewer,
+        CASE WHEN user.role = "non-member" THEN "member" ELSE user.role END AS newRole,
+        CASE WHEN user.userStatus IN ["", "inactive"] THEN "active" ELSE user.userStatus END AS newStatus
+        SET user.userStatus = newStatus
+        SET user.role = newRole
+        WITH COLLECT(DISTINCT {
+            armID: arm.armID,
+            armName: arm.armName,
+            accessStatus: access.accessStatus,
+            requestDate: access.requestDate,
+            reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
+            reviewDate: access.reviewDate,
+            comment: access.comment
+        }) AS acl
+        RETURN acl    
     `
-    const result = await executeQuery(parameters, cypher, 'user');
-    if (result && result[0]) {
-        return result[0].properties;
-    }
-    return;
+    let result = await executeQuery(parameters, cypher, 'acl');
+    return result[0];
 }
 
 async function rejectUser(parameters) {
@@ -457,7 +485,7 @@ exports.getMyUser = getMyUser
 exports.getUser = getUser
 exports.listUsers = listUsers
 exports.registerUser = registerUser
-exports.approveUser = approveUser
+exports.approveAccess = approveAccess
 exports.rejectUser = rejectUser
 exports.editUser = editUser
 exports.wipeDatabase = wipeDatabase
@@ -468,6 +496,7 @@ exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
 exports.updateMyUser = updateMyUser
+exports.getAccesses = getAccesses
 exports.requestArmAccess = requestArmAccess
 exports.searchValidRequestArm = searchValidRequestArm
 // exports.deleteUser = deleteUser
