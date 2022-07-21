@@ -112,7 +112,7 @@ async function getUser(parameters) {
         WITH user, COLLECT(DISTINCT request{
             armID: arm.armID,
             armName: arm.armName,
-            status: request.accessStatus,
+            accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
             reviewDate: request.reviewDate,
@@ -126,7 +126,7 @@ async function getUser(parameters) {
             email: user.email,
             IDP: user.IDP,
             role: user.role,
-            status: user.userStatus,
+            userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
             acl: acl
