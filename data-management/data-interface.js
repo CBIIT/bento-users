@@ -283,6 +283,8 @@ const revokeAccess = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['approved'])){
+            return new Error(errorName.INVALID_REVOKE_ARMS);
         }
         else {
             parameters.reviewDate = (new Date()).toString();
