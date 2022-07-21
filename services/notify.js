@@ -1,5 +1,6 @@
 const { createTransport } = require('nodemailer');
 const config = require('../config');
+const {getAdminEmails} = require("../data-management/neo4j-service");
 
 async function sendNotification(from, subject, html, to = [], cc = [], bcc = []) {
 
@@ -44,4 +45,18 @@ function asArray(values = []) {
         : [values];
 }
 
-module.exports = { sendNotification }
+const notifyTemplate = async (userInfo, sendAdmin, sendUser) => {
+    // send admin notification
+    if (sendAdmin) {
+        const adminEmails = await getAdminEmails();
+        await sendAdmin(adminEmails, {});
+    }
+    if (sendUser)  {
+        await sendUser(userInfo.email, {
+            firstName: userInfo.firstName,
+            lastName: userInfo.lastName
+        });
+    }
+}
+
+module.exports = { sendNotification, notifyTemplate }

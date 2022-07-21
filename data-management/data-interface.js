@@ -2,12 +2,13 @@ const {v4} = require('uuid')
 const neo4j = require('./neo4j-service')
 const {errorName, valid_idps, user_roles, user_statuses} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
-    sendEditNotification
+    sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const ArmAccess = require("../model/arm-access");
+const {notifyTemplate} = require("../services/notify");
 
 async function execute(fn) {
     try {
@@ -19,10 +20,6 @@ async function execute(fn) {
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
-}
-
-async function getAdminEmails(){
-    return await neo4j.getAdminEmails();
 }
 
 async function checkAdminPermissions(userInfo) {
@@ -167,17 +164,13 @@ const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
     inspectValidUserOrThrow(context);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
-    if (response) {
-        setImmediate(async () => {
-            // TODO send admin arm access notification
-            // TODO send user arm request notification
-        });
-    }
+    // Send email notification after success
+    if (response) setImmediate(async () => { await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);});
     if (response) return response;
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
 }
 
-const registerUser = async (parameters, _) => {
+const registerUser = async (parameters, context) => {
     formatParams(parameters.userInfo);
     const task = async () => {
         inspectValidUserOrThrow(parameters);
@@ -195,15 +188,8 @@ const registerUser = async (parameters, _) => {
         let response = await neo4j.registerUser(registrationInfo);
         const notify = (parameters.isNotify === false) ? parameters.isNotify: true;
         if (response && notify) {
-            setImmediate(async () => {
-                let adminEmails = await getAdminEmails();
-                let template_params = {
-                    firstName: response.firstName,
-                    lastName: response.lastName
-                }
-                await sendAdminNotification(adminEmails, template_params);
-                await sendRegistrationConfirmation(response.email, template_params)
-            });
+        // Send email notification after success
+        if (response) setImmediate(async () => { await notifyTemplate(context.userInfo, sendAdminNotification, sendRegistrationConfirmation);});
         }
         if (response) return response;
         throw new Error(errorName.UNABLE_TO_REGISTER_USER);

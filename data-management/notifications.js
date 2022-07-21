@@ -10,24 +10,27 @@ try {
     console.error(e)
 }
 
+const send = async (fn)=> {
+    if (email_constants) return await fn();
+    console.error("Unable to load email constants from file, email not sent");
+}
+const adminTemplate = {firstName: "Bento Administrator", lastName: ""};
+
 module.exports = {
-    sendAdminNotification: async (admins, template_params) => {
-        if (email_constants) {
+    sendAdminNotification: async (admins, _) => {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.ADMIN_NOTIFICATION_SUBJECT,
                 await createEmailTemplate("notification-template.html", {
-                    message: email_constants.ADMIN_NOTIFICATION_CONTENT, ...template_params
+                    message: email_constants.ADMIN_NOTIFICATION_CONTENT, ...adminTemplate
                 }),
                 admins
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
-
+        });
     },
     sendRegistrationConfirmation: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.CONFIRMATION_SUBJECT,
@@ -36,12 +39,10 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
     },
     sendApprovalNotification: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.APPROVAL_SUBJECT,
@@ -50,12 +51,10 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
     },
     sendRejectionNotification: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.REJECTION_SUBJECT,
@@ -64,12 +63,10 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
     },
     sendEditNotification: async (email, template_params) => {
-        if (email_constants) {
+        return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
                 email_constants.EDIT_SUBJECT,
@@ -78,8 +75,30 @@ module.exports = {
                 }),
                 email
             );
-        } else {
-            console.error("Unable to load email constants from file, email not sent")
-        }
+        });
+    },
+    notifyUserArmAccessRequest: async (email, template_params) => {
+        return await send(async () => {
+            await sendNotification(
+                email_constants.NOTIFICATION_SENDER,
+                email_constants.ARM_REQUEST_ACCESS_SUBJECT,
+                await createEmailTemplate("notification-template.html", {
+                    message: email_constants.ARM_REQUEST_ACCESS_COMMENT, ...template_params
+                }),
+                email
+            );
+        });
+    },
+    notifyAdminArmAccessRequest: async (email, _) => {
+        return await send(async () => {
+            await sendNotification(
+                email_constants.NOTIFICATION_SENDER,
+                email_constants.ADMIN_ARM_REQUEST_NOTIFICATION_SUBJECT,
+                await createEmailTemplate("notification-template.html", {
+                    message: email_constants.ADMIN_ARM_REQUEST_ACCESS_COMMENT, ...adminTemplate
+                }),
+                email
+            );
+        });
     }
 }
