@@ -1,6 +1,7 @@
 const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
+const {isUndefined} = require("../util/string-util");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -187,6 +188,41 @@ async function listArms(parameters) {
 }
 
 //Mutations
+async function requestArmAccess(listParams, userInfo) {
+    const promises = listParams.map(async (param) => {
+        const cypher =
+            `
+            MATCH (user:User) WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
+            OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
+            MERGE (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
+            SET access.accessStatus= $accessStatus
+            SET access.requestDate= '${getTimeNow()}'
+            RETURN access
+            `
+        return await executeQuery(param, cypher, 'access');
+    });
+    return await Promise.all(promises);
+}
+
+// Searching for valid arms excluding approved or requested arm
+async function searchValidRequestArm(parameters, user) {
+    const cypher =
+        `
+        MATCH (user:User)-[*..1]-(req:Access)-[*..1]-(userArm:Arm)
+        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in $invalidStatus
+        WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
+        
+        MATCH (arm:Arm)
+        WHERE arm.armID IN $armIDs and not arm.armID in invalidArmIds
+        OPTIONAL MATCH (arm)<-[:of_arm]-(r:Access)
+        RETURN DISTINCT arm
+        `
+    const result = await executeQuery(parameters, cypher, 'arm');
+    const arms = [];
+    result.forEach(x => arms.push(x.properties));
+    return arms;
+}
+
 async function registerUser(parameters) {
     const cypher =
         `
@@ -334,34 +370,17 @@ async function editUser(parameters) {
     return result[0];
 }
 
-async function updateMyUser(parameters) {
-    let cypher =
+async function updateMyUser(parameters, userInfo) {
+    const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(isUndefined(p)));
+    const cypher =
         `
         MATCH (user:User)
         WHERE
-            user.email = $email AND user.IDP = $idp
-        `;
-    if (parameters.firstName) {
-        cypher = cypher +
-            `
-            SET user.firstName = $firstName
-            `;
-    }
-    if (parameters.lastName) {
-        cypher = cypher +
-            `
-            SET user.lastName = $lastName
-            `;
-    }
-    if (parameters.organization) {
-        cypher = cypher +
-            `
-            SET user.organization = $organization
-            `;
-    }
-    cypher = cypher +
-        `
-        SET user.editDate = $editDate
+            user.email = '${userInfo.email}' AND user.IDP = '${userInfo.idp}'
+        ${!isUndefined(parameters.firstName) ? 'SET user.firstName = $firstName' : ''}
+        ${!isUndefined(parameters.lastName) ? 'SET user.lastName = $lastName' : ''}
+        ${!isUndefined(parameters.organization) ? 'SET user.organization = $organization' : ''}
+        ${isRequiredTimeUpdate ? `SET user.editDate = '${getTimeNow()}'` : ''} 
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
@@ -478,6 +497,8 @@ exports.resetApproval = resetApproval
 exports.listArms = listArms
 exports.updateMyUser = updateMyUser
 exports.getAccesses = getAccesses
+exports.requestArmAccess = requestArmAccess
+exports.searchValidRequestArm = searchValidRequestArm
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
