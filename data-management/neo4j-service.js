@@ -196,9 +196,8 @@ async function rejectAccess(parameters) {
         `  
         MATCH (user:User)
         WHERE user.userID = $userID
-        MATCH (access:Access)-[:of_user]->(user)
-        WHERE access.armID IN $armIDs
-        MATCH (access)-[:of_arm]->(arm:Arm)
+        MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
+        WHERE arm.armID IN $armIDs
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
@@ -217,7 +216,6 @@ async function rejectAccess(parameters) {
         }) AS acl
         RETURN acl    
     `
-    let accesses = [];
     let result = await executeQuery(parameters, cypher, 'acl');
     return result[0];
 }
