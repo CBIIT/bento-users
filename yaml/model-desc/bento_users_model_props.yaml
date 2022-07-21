@@ -1,5 +1,5 @@
 PropDefinitions:
-  #Property of User, Access
+  #Property of User
   userID:
     Desc: User unique identifier
     Type: string
@@ -61,7 +61,7 @@ PropDefinitions:
     Desc: The date upon which the user account was edited
     Type: datetime
     Req: false
-  #Property of Arm, Access
+  #Property of Arm
   armID:
     Desc: Arm unique identifier
     Type: string
