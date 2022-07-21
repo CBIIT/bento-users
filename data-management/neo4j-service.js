@@ -174,6 +174,41 @@ async function listArms(parameters) {
 }
 
 //Mutations
+async function requestArmAccess(listParams, userInfo) {
+    const promises = listParams.map(async (param) => {
+        const cypher =
+            `
+            MATCH (user:User) WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
+            OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
+            MERGE (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
+            SET access.accessStatus= $accessStatus
+            SET access.requestDate= '${getTimeNow()}'
+            RETURN access
+            `
+        return await executeQuery(param, cypher, 'access');
+    });
+    return await Promise.all(promises);
+}
+
+// Searching for valid arms excluding approved or requested arm
+async function searchValidRequestArm(parameters, user) {
+    const cypher =
+        `
+        MATCH (user:User)-[*..1]-(req:Access)-[*..1]-(userArm:Arm)
+        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in $invalidStatus
+        WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
+        
+        MATCH (arm:Arm)
+        WHERE arm.armID IN $armIDs and not arm.armID in invalidArmIds
+        OPTIONAL MATCH (arm)<-[:of_arm]-(r:Access)
+        RETURN DISTINCT arm
+        `
+    const result = await executeQuery(parameters, cypher, 'arm');
+    const arms = [];
+    result.forEach(x => arms.push(x.properties));
+    return arms;
+}
+
 async function registerUser(parameters) {
     const cypher =
         `
@@ -433,6 +468,8 @@ exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
 exports.updateMyUser = updateMyUser
+exports.requestArmAccess = requestArmAccess
+exports.searchValidRequestArm = searchValidRequestArm
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

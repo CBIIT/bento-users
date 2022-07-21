@@ -49,16 +49,18 @@ describe('register user API test', () => {
                 idp: 'nih',
             }
         }
-        const result = await registerUser(parameters);
-        expect(result.message).toBe(errorName.NOT_UNIQUE);
+        await expect(registerUser(parameters))
+            .rejects
+            .toThrow(errorName.NOT_UNIQUE);
+
     });
 
-    test('/register with notification test', async () => {
-        await registerUser(parameters);
-        setImmediate(()=>{
-            expect(sendAdminNotification).toBeCalledTimes(1);
-            expect(sendRegistrationConfirmation).toBeCalledTimes(1);
-
-        });
-    });
+    // test('/register with notification test', async () => {
+    //     await registerUser(parameters);
+    //     setImmediate(()=>{
+    //         expect(sendAdminNotification).toBeCalledTimes(1);
+    //         expect(sendRegistrationConfirmation).toBeCalledTimes(1);
+    //
+    //     });
+    // });
 });
