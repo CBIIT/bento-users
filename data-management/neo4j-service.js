@@ -14,9 +14,9 @@ async function getAccesses(userID, accessStatuses){
     `
         MATCH (u:User)
         WHERE u.userID = $userID
-        MATCH (a:Access)-[:of_user]->(u)
+        MATCH (arm:Arm)<-[:of_arm]-(a:Access)-[:of_user]->(u)
         WHERE a.accessStatus IN $accessStatuses
-        RETURN COLLECT(DISTINCT a.armID) AS result
+        RETURN COLLECT(DISTINCT arm.armID) AS result
     `
     const result = await executeQuery(parameters, cypher, 'result');
     return result[0];
@@ -213,9 +213,8 @@ async function approveAccess(parameters) {
     `  
         MATCH (user:User)
         WHERE user.userID = $userID
-        MATCH (access:Access)-[:of_user]->(user)
-        WHERE access.armID IN $armIDs
-        MATCH (access)-[:of_arm]->(arm:Arm)
+        MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
+        WHERE arm.armID IN $armIDs
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
