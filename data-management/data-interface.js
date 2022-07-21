@@ -7,6 +7,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
 const {isElementInArray, getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
+const ArmAccess = require("../model/arm-access");
 
 async function execute(fn) {
     try {
@@ -147,15 +148,25 @@ async function requestAccess(parameters, context) {
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
 }
 
-const searchValidReqArms = async (arrArm, context) => {
+const searchValidReqArms = async (parameters, context) => {
     const user = UserBuilder.createUser(context.userInfo);
-    return await neo4j.searchValidRequestArm(arrArm, user);
+    return await neo4j.searchValidRequestArm({...parameters, invalidStatus: ArmAccess.rejectRequestAccessStatus() }, user);
+}
+
+const createReqArmParams = (armIDs) => {
+    const listParameters = [];
+    const arms = Array.isArray(armIDs) ? armIDs : [armIDs];
+    arms.forEach((armID)=> {
+        const aArm = ArmAccess.createRequestAccess();
+        listParameters.push({armID: armID, accessStatus: aArm.getAccessStatus(), reqID: aArm.getRequestID()});
+    });
+    return listParameters;
 }
 
 const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
     inspectValidUserOrThrow(context);
-    const response = await neo4j.requestArmAccess(armIDs, context.userInfo);
+    const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
     if (response) {
         setImmediate(async () => {
             // TODO send admin arm access notification

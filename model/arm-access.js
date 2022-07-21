@@ -27,6 +27,10 @@ class ArmAccess {
         arm._reviewDate = getTimeNow();
         return arm;
     }
+    // reject access request if previously approved or requested access
+    static rejectRequestAccessStatus() {
+        return [REQUESTED, APPROVED];
+    }
 
     getRequestID() {
         return this._requestID;

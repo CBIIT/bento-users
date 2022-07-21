@@ -2,8 +2,6 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {REQUESTED, APPROVED} = require("../constants/access-constant");
-const ArmAccess = require("../model/arm-access");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -176,22 +174,18 @@ async function listArms(parameters) {
 }
 
 //Mutations
-async function requestArmAccess(armIDs, userInfo) {
-    const arms = Array.isArray(armIDs) ? armIDs : [armIDs];
-    const promises = arms.map(async (arm) => {
-        const aArm = ArmAccess.createRequestAccess();
+async function requestArmAccess(listParams, userInfo) {
+    const promises = listParams.map(async (param) => {
         const cypher =
             `
             MATCH (user:User) WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
             OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
-            CREATE (user)<-[:of_user]-(access:Access {
-                accessStatus: '${aArm.getAccessStatus()}',
-                requestDate: '${getTimeNow()}',
-                requestID: '${aArm.getRequestID()}'
-            })-[:of_arm]->(arm)
+            MERGE (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
+            SET access.accessStatus= $accessStatus
+            SET access.requestDate= '${getTimeNow()}'
             RETURN access
             `
-        return await executeQuery({armID: arm}, cypher, 'access');
+        return await executeQuery(param, cypher, 'access');
     });
     return await Promise.all(promises);
 }
@@ -201,7 +195,7 @@ async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
         MATCH (user:User)-[*..1]-(req:Access)-[*..1]-(userArm:Arm)
-        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in ['${REQUESTED}', '${APPROVED}']
+        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in $invalidStatus
         WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
         
         MATCH (arm:Arm)
