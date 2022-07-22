@@ -251,6 +251,10 @@ async function approveAccess(parameters) {
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
         WHERE arm.armID IN $armIDs
+        WITH arm, access, user
+        OPTIONAL MATCH (access)-[r:approved_by]->()
+        DELETE r
+        WITH arm, access, user
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
