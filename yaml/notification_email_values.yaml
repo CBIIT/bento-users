@@ -11,3 +11,7 @@ REJECTION_CONTENT_POST_COMMENT: ". For further assistance please contact the Ben
 EDIT_SUBJECT: "Bento account edited"
 EDIT_CONTENT_PRE_COMMENT: "Your Bento account has been edited with the following explanation: "
 EDIT_CONTENT_POST_COMMENT: ". If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
+ARM_REQUEST_ACCESS_SUBJECT: "Bento data access request confirmation"
+ARM_REQUEST_ACCESS_COMMENT: "Your data access request has been received and is under review"
+ADMIN_ARM_REQUEST_NOTIFICATION_SUBJECT: "Bento data access request received"
+ADMIN_ARM_REQUEST_ACCESS_COMMENT: "There is a new data access request pending review"

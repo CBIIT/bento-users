@@ -27,7 +27,7 @@ async function getAdminEmails() {
     const cypher =
         `
         MATCH (n:User)
-        WHERE n.role = 'admin' AND n.status = 'approved'
+        WHERE n.role = 'admin' AND n.userStatus = 'active'
         RETURN COLLECT(DISTINCT n.email) AS result
     `
     const result = await executeQuery({}, cypher, 'result');
@@ -208,7 +208,7 @@ async function requestArmAccess(listParams, userInfo) {
 async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
-        MATCH (user:User)-[*..1]-(req:Access)-[*..1]-(userArm:Arm)
+        MATCH (user:User)<-[:of_user]-(req:Access)-[:of_arm]->(userArm:Arm)
         WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in $invalidStatus
         WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
         
@@ -251,6 +251,10 @@ async function approveAccess(parameters) {
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
         WHERE arm.armID IN $armIDs
+        WITH arm, access, user
+        OPTIONAL MATCH (access)-[r:approved_by]->()
+        DELETE r
+        WITH arm, access, user
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
@@ -305,6 +309,51 @@ async function rejectAccess(parameters) {
         RETURN acl    
     `
     let result = await executeQuery(parameters, cypher, 'acl');
+    return result[0];
+}
+
+async function revokeAccess(parameters) {
+    const cypher =
+        `
+            MATCH (user:User)
+            WHERE user.userID = $userID
+            OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(remaining:Access)-[:of_user]->(user)
+            WHERE NOT(arm.armID IN $armIDs) AND remaining.accessStatus = 'approved'
+            WITH CASE 
+                WHEN COUNT(DISTINCT remaining) < 1
+                THEN 'inactive'
+                ELSE user.userStatus
+            END AS newStatus 
+            MATCH (reviewer:User)
+            WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
+            WITH newStatus, reviewer.firstName + " " + reviewer.lastName AS adminName, reviewer.userID AS adminID
+            MATCH (user:User)
+            WHERE user.userID = $userID 
+            MATCH (arm:Arm)<-[:of_arm]-(revoked:Access)-[:of_user]->(user)
+            WHERE arm.armID IN $armIDs AND revoked.accessStatus = 'approved'
+            WITH newStatus, adminName, adminID, revoked, user, arm
+            OPTIONAL MATCH (revoked)-[r:approved_by]->()
+            DELETE r
+            WITH newStatus, adminName, adminID, revoked, user, arm
+            MATCH (reviewer:User)
+            WHERE reviewer.userID = adminID
+            CREATE (revoked)-[:approved_by]->(reviewer)
+            SET revoked.accessStatus = 'revoked'
+            SET revoked.reviewDate = $reviewDate
+            SET revoked.approvedBy = adminID
+            SET revoked.comment = $comment
+            SET user.userStatus = newStatus
+            RETURN COLLECT(DISTINCT revoked{
+                armID: arm.armID,
+                armName: arm.armName,
+                accessStatus: revoked.accessStatus,
+                requestDate: revoked.requestDate,
+                reviewAdminName: adminName,
+                reviewDate: revoked.reviewDate,
+                comment: revoked.comment
+            }) AS acl
+        `
+    let result =  await executeQuery(parameters, cypher, 'acl');
     return result[0];
 }
 
@@ -506,6 +555,7 @@ exports.checkAlreadyApproved = checkAlreadyApproved
 exports.checkAlreadyRejected = checkAlreadyRejected
 exports.resetApproval = resetApproval
 exports.listArms = listArms
+exports.revokeAccess = revokeAccess
 exports.updateMyUser = updateMyUser
 exports.getAccesses = getAccesses
 exports.requestArmAccess = requestArmAccess
