@@ -12,11 +12,13 @@ const root = {
     getMyUser: data_interface.getMyUser,
     listUsers: data_interface.listUsers,
     registerUser: data_interface.registerUser,
-    approveUser: data_interface.approveUser,
     rejectAccess: data_interface.rejectAccess,
+    approveAccess: data_interface.approveAccess,
     editUser: data_interface.editUser,
     listArms: data_interface.listArms,
-    getUser: data_interface.getUser
+    updateMyUser: data_interface.updateMyUser,
+    getUser: data_interface.getUser,
+    requestAccess: data_interface.requestAccess
     // The below functions are not fully tested and verified yet and should not be used
     // updateMyUser: data_interface.updateMyUser,
     // deleteUser: data_interface.deleteUser,
@@ -31,7 +33,7 @@ module.exports = graphqlHTTP((req, res) => {
         schema: schema,
         rootValue: root,
         context: {
-            userInfo: req.session.userInfo
+            userInfo: JSON.parse(JSON.stringify(req.session.userInfo))
         },
         customFormatErrorFn: (error) => {
             let status = undefined;

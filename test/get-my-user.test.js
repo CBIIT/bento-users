@@ -1,4 +1,4 @@
-const {registerUser, getMyUser} = require("../data-management/data-interface");
+const {getMyUser} = require("../data-management/data-interface");
 const {sendRegistrationConfirmation, sendAdminNotification} = require("../data-management/notifications");
 const {registerUser: registerUserService,getMyUser:getMyUserService, checkUnique} = require("../data-management/neo4j-service");
 const {errorName} = require("../data-management/graphql-api-constants");
@@ -19,8 +19,9 @@ describe('getMyUser API test', () => {
     test('/geyMyUser NOT_LOGGED_IN', async () => {
         let session = JSON.parse(JSON.stringify(fakeSession));
         delete session.userInfo.idp;
-        const result = await getMyUser({}, session);
-        expect(result.message).toBe(errorName.NOT_LOGGED_IN);
+        await expect(getMyUser({}, session))
+            .rejects
+            .toThrow(errorName.NOT_LOGGED_IN);
     });
 
     test('/geyMyUser throw error', async () => {
@@ -28,15 +29,16 @@ describe('getMyUser API test', () => {
         getMyUserService.mockImplementation(() => {
             throw new Error(TEST_ERROR);
         });
-        const result = await getMyUser({}, fakeSession);
-        expect(result.message).toBe(TEST_ERROR);
+        await expect(getMyUser({}, fakeSession))
+            .rejects
+            .toThrow(TEST_ERROR);
     });
 
     test.concurrent('/register user after getMyUser', async () => {
         sendAdminNotification.mockReturnValue(Promise.resolve());
         sendRegistrationConfirmation.mockReturnValue(Promise.resolve());
         getMyUserService.mockReturnValue(Promise.resolve(undefined));
-        registerUserService.mockReturnValue(Promise.resolve());
+        registerUserService.mockReturnValue(Promise.resolve(true));
         checkUnique.mockReturnValue(Promise.resolve(true));
 
         await getMyUser({}, fakeSession);
