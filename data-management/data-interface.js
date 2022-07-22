@@ -172,7 +172,7 @@ const addArmRequestAccess = async (armIDs, context) => {
     inspectValidUserOrThrow(context);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
     // Send email notification after success
-    if (response) setImmediate(async () =>{ await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);});
+    if (response) await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
     if (response) return response;
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
 }
@@ -195,7 +195,7 @@ const registerUser = async (parameters, context) => {
         let response = await neo4j.registerUser(registrationInfo);
         const notify = (parameters.isNotify === false) ? parameters.isNotify: true;
         // Send email notification after success
-        if (response && notify) setImmediate(async () => { await notifyTemplate(context.userInfo, sendAdminNotification, sendRegistrationConfirmation);});
+        if (response && notify) await notifyTemplate(context.userInfo, sendAdminNotification, sendRegistrationConfirmation);
         if (response) return response;
         throw new Error(errorName.UNABLE_TO_REGISTER_USER);
     }
