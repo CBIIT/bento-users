@@ -49,8 +49,8 @@ const notifyTemplate = async (userInfo, sendAdmin, sendUser) => {
     // send admin notification
     if (sendAdmin) {
         const adminEmails = await getAdminEmails();
-        if (adminEmails && adminEmails.length > 0) return await sendAdmin(adminEmails, {});
-        console.error("Admin email is not found, please check if administrator user existed");
+        if (adminEmails && adminEmails.length > 0) await sendAdmin(adminEmails, {});
+        else console.error("Admin email is not found, please check if administrator user existed");
     }
     if (sendUser)  {
         await sendUser(userInfo.email, {
