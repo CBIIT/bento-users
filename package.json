@@ -16,7 +16,6 @@
     "express-mysql-session": "^2.1.8",
     "express-session": "^1.17.2",
     "googleapis": "^95.0.0",
-    "graphql": "^16.5.0",
     "http-errors": "~1.6.3",
     "jade": "^0.29.0",
     "js-yaml": "^4.1.0",
