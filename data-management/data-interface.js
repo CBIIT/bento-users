@@ -280,6 +280,8 @@ const editUser = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
+        }else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['requested'])){
+            return new Error(errorName.INVALID_REVIEW_ARMS);
         }
         else {
             if (parameters.role && !user_roles.includes(parameters.role)) {
