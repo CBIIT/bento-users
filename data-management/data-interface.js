@@ -230,30 +230,27 @@ const approveAccess = async (parameters, context) => {
 }
 
 
-const rejectUser = async (parameters, context) => {
-    formatParams(parameters);
+const rejectAccess = async (parameters, context) => {
     try {
         let userInfo = context.userInfo;
         if (!verifyUserInfo(userInfo)){
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else if (await neo4j.checkAlreadyRejected(parameters.userID)) {
-            return new Error(errorName.ALREADY_REJECTED);
-        } else {
-            parameters.rejectionDate = (new Date()).toString()
-            let response = await neo4j.rejectUser(parameters)
-            if (response) {
-                let template_params = {
-                    firstName: response.firstName,
-                    lastName: response.lastName,
-                    comment: response.comment
-                }
-                await sendRejectionNotification(response.email, template_params);
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['requested'])){
+            return new Error(errorName.INVALID_REVIEW_ARMS);
+        }
+        else {
+            parameters.reviewDate = (new Date()).toString();
+            parameters.reviewerEmail = userInfo.email;
+            parameters.reviewerIDP = userInfo.idp;
+            let response = await neo4j.rejectAccess(parameters)
+            if (config.emails_enabled && response) {
+                // todo implement email notification
+                // await sendApprovalNotification(response.email, template_params);
                 return response;
-            } else {
-                return new Error(errorName.USER_NOT_FOUND);
             }
+            return response;
         }
     } catch (err) {
         return err;
@@ -296,8 +293,7 @@ const editUser = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        }
-        else {
+        } else {
             if (parameters.role && !user_roles.includes(parameters.role)) {
                 return new Error(errorName.INVALID_ROLE);
             }
@@ -353,7 +349,7 @@ module.exports = {
     getUser: getUser,
     listUsers: listUsers,
     registerUser: registerUser,
-    rejectUser: rejectUser,
+    rejectAccess: rejectAccess,
     editUser: editUser,
     listArms: listArms,
     revokeAccess: revokeAccess,
