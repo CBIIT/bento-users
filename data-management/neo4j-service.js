@@ -27,7 +27,7 @@ async function getAdminEmails() {
     const cypher =
         `
         MATCH (n:User)
-        WHERE n.role = 'admin' AND n.status = 'approved'
+        WHERE n.role = 'admin' AND n.userStatus = 'active'
         RETURN COLLECT(DISTINCT n.email) AS result
     `
     const result = await executeQuery({}, cypher, 'result');
@@ -208,7 +208,7 @@ async function requestArmAccess(listParams, userInfo) {
 async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
-        MATCH (user:User)-[*..1]-(req:Access)-[*..1]-(userArm:Arm)
+        MATCH (user:User)<-[:of_user]-(req:Access)-[:of_arm]->(userArm:Arm)
         WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in $invalidStatus
         WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
         
