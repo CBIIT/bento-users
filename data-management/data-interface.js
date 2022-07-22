@@ -254,7 +254,10 @@ const rejectAccess = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else {
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['requested'])){
+            return new Error(errorName.INVALID_REVIEW_ARMS);
+        }
+        else {
             parameters.reviewDate = (new Date()).toString();
             parameters.reviewerEmail = userInfo.email;
             parameters.reviewerIDP = userInfo.idp;
@@ -280,10 +283,7 @@ const editUser = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        }else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['requested'])){
-            return new Error(errorName.INVALID_REVIEW_ARMS);
-        }
-        else {
+        } else {
             if (parameters.role && !user_roles.includes(parameters.role)) {
                 return new Error(errorName.INVALID_ROLE);
             }
