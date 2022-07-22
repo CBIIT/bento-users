@@ -11,7 +11,6 @@ const config = require('../config');
 const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
 
-
 async function execute(fn) {
     try {
         return await fn();
@@ -261,6 +260,33 @@ const rejectUser = async (parameters, context) => {
     }
 }
 
+const revokeAccess = async (parameters, context) => {
+    try{
+        let userInfo = context.userInfo;
+        if (!userInfo) {
+            return new Error(errorName.NOT_LOGGED_IN);
+        } else if (!await checkAdminPermissions(userInfo)) {
+            return new Error(errorName.NOT_AUTHORIZED);
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['approved'])){
+            return new Error(errorName.INVALID_REVOKE_ARMS);
+        }
+        else {
+            parameters.reviewDate = (new Date()).toString();
+            parameters.reviewerEmail = userInfo.email;
+            parameters.reviewerIDP = userInfo.idp;
+            let response = await neo4j.revokeAccess(parameters)
+            if (config.emails_enabled && response) {
+                // todo implement email notification
+                // await sendRevokedNotification(response.email, template_params);
+                return response;
+            }
+            return response;
+        }
+    } catch (err) {
+        return err;
+    }
+}
+
 
 const editUser = async (parameters, context) => {
     formatParams(parameters);
@@ -330,6 +356,7 @@ module.exports = {
     rejectUser: rejectUser,
     editUser: editUser,
     listArms: listArms,
+    revokeAccess: revokeAccess,
     approveAccess: approveAccess,
     updateMyUser: updateMyUser,
     searchValidReqArms,
