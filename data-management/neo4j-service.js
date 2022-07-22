@@ -316,6 +316,13 @@ async function revokeAccess(parameters) {
             WHERE user.userID = $userID 
             MATCH (arm:Arm)<-[:of_arm]-(revoked:Access)-[:of_user]->(user)
             WHERE arm.armID IN $armIDs AND revoked.accessStatus = 'approved'
+            WITH newStatus, adminName, adminID, revoked, user, arm
+            OPTIONAL MATCH (revoked)-[r:approved_by]->()
+            DELETE r
+            WITH newStatus, adminName, adminID, revoked, user, arm
+            MATCH (reviewer:User)
+            WHERE reviewer.userID = adminID
+            CREATE (revoked)-[:approved_by]->(reviewer)
             SET revoked.accessStatus = 'revoked'
             SET revoked.reviewDate = $reviewDate
             SET revoked.approvedBy = adminID
