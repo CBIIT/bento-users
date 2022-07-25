@@ -184,7 +184,7 @@ const seedInit = async () => {
     if ((await neo4j.getAdminEmails()).length < 1){
         try{
             seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
-            let admin = {...seedData.admin, ...{userID: v4(), role: 'admin', status: 'active', acl: []}};
+            let admin = {...seedData.admin, ...{userID: v4(), role: 'admin', status: 'active'}};
             formatParams(admin);
             await neo4j.registerUser(admin);
             console.log("Seed admin initialized in database");
