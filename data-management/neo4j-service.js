@@ -9,6 +9,22 @@ const driver = neo4j.driver(
 );
 
 //Queries
+async function createArms(arms){
+    for (let arm of arms) {
+        const cypher =
+        `
+            CREATE (arm:Arm)
+            SET arm.armID = $armID
+            SET arm.armName = $armName
+            RETURN arm
+        `
+        let result = await executeQuery(arm, cypher, 'arm');
+        if (!result[0]){
+            throw new Error("Failed to initialize arm with the following data: "+arm);
+        }
+    }
+}
+
 async function getAccesses(userID, accessStatuses){
     let parameters = {userID, accessStatuses};
     const cypher =
@@ -560,6 +576,7 @@ exports.updateMyUser = updateMyUser
 exports.getAccesses = getAccesses
 exports.requestArmAccess = requestArmAccess
 exports.searchValidRequestArm = searchValidRequestArm
+exports.createArms = createArms
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

@@ -30,3 +30,5 @@ Following environmental variables are needed
 - EMAIL_USER: email server's username as an additional parameter
 - EMAIL_PASSWORD: email server's password as an additional parameter
 - EMAIL_SERVICE_EMAIL: 
+# Seed Data
+- SEED_DATA_FILE: A yaml file containing data for a seed admin and seed arms that will be loaded when no admins nor arms are found (example file: yaml/seed-data-example.yaml)

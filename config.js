@@ -27,7 +27,10 @@ const config = {
 
   // Email settings
   email_service_email: process.env.EMAIL_SERVICE_EMAIL,
-  email_transport: getTransportConfig()
+  email_transport: getTransportConfig(),
+
+  //Seed data for initialization
+  seed_data_file: process.env.SEED_DATA_FILE,
 };
 
 function getTransportConfig() {
