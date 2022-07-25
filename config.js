@@ -24,7 +24,6 @@ const config = {
   DATA_FILE: process.env.DATA_FILE,
 
   // Email settings
-  email_service_email: process.env.EMAIL_SERVICE_EMAIL,
   email_transport: getTransportConfig()
 };
 

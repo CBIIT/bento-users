@@ -2,7 +2,6 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const {sendNotification} = require("../services/notify");
 const {createEmailTemplate} = require("../lib/create-email-template");
-const config = require('../config');
 
 let email_constants = undefined
 try {
@@ -20,7 +19,7 @@ const adminTemplate = {firstName: "Bento Administrator", lastName: ""};
 async function sendReviewNotification(email, template_params, subject, message) {
     return await send(async () => {
         await sendNotification(
-            config.email_service_email,
+            email_constants.NOTIFICATION_SENDER,
             subject,
             await createEmailTemplate("notification-template.html", {
                 message: message, ...template_params

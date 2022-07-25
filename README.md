@@ -27,4 +27,3 @@ Following environmental variables are needed
 # Additional configuration for email server
 - EMAIL_USER: email server's username as an additional parameter
 - EMAIL_PASSWORD: email server's password as an additional parameter
-- EMAIL_SERVICE_EMAIL: 
