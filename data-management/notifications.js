@@ -16,6 +16,19 @@ const send = async (fn)=> {
 }
 const adminTemplate = {firstName: "Bento Administrator", lastName: ""};
 
+async function sendReviewNotification(email, template_params, subject, message) {
+    return await send(async () => {
+        await sendNotification(
+            email_constants.NOTIFICATION_SENDER,
+            subject,
+            await createEmailTemplate("notification-template.html", {
+                message: message, ...template_params
+            }),
+            email
+        );
+    });
+}
+
 module.exports = {
     sendAdminNotification: async (admins, _) => {
         return await send(async () => {
@@ -42,28 +55,10 @@ module.exports = {
         });
     },
     sendApprovalNotification: async (email, template_params) => {
-        return await send(async () => {
-            await sendNotification(
-                email_constants.NOTIFICATION_SENDER,
-                email_constants.APPROVAL_SUBJECT,
-                await createEmailTemplate("notification-template.html", {
-                    message: email_constants.APPROVAL_CONTENT, ...template_params
-                }),
-                email
-            );
-        });
+        return await sendReviewNotification(email, template_params, email_constants.DAR_APPROVAL_SUBJECT, email_constants.DAR_APPROVAL_CONTENT);
     },
     sendRejectionNotification: async (email, template_params) => {
-        return await send(async () => {
-            await sendNotification(
-                email_constants.NOTIFICATION_SENDER,
-                email_constants.REJECTION_SUBJECT,
-                await createEmailTemplate("notification-template.html", {
-                    message: email_constants.REJECTION_CONTENT_PRE_COMMENT + template_params.comment + email_constants.REJECTION_CONTENT_POST_COMMENT, ...template_params
-                }),
-                email
-            );
-        });
+        return await sendReviewNotification(email, template_params, email_constants.DAR_REJECTION_SUBJECT, email_constants.DAR_REJECTION_CONTENT);
     },
     sendEditNotification: async (email, template_params) => {
         return await send(async () => {

@@ -22,11 +22,8 @@ const config = {
   //Initial database loading
   DATA_LOADING_MODE: process.env.DATA_LOADING_MODE,
   DATA_FILE: process.env.DATA_FILE,
-  //Testing
-  TEST_EMAIL: process.env.TEST_EMAIL,
 
   // Email settings
-  email_service_email: process.env.EMAIL_SERVICE_EMAIL,
   email_transport: getTransportConfig(),
 
   //Seed data for initialization

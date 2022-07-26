@@ -249,9 +249,12 @@ const approveAccess = async (parameters, context) => {
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.approveAccess(parameters)
             if (config.emails_enabled && response) {
-                // todo implement email notification
-                // await sendApprovalNotification(response.email, template_params);
-                return response;
+                let userData = await neo4j.getUser({userID: parameters.userID});
+                let template_params = {
+                    firstName: userData.firstName,
+                    lastName: userData.lastName
+                }
+                await sendApprovalNotification(userData.email, template_params);
             }
             return response;
         }
@@ -277,9 +280,12 @@ const rejectAccess = async (parameters, context) => {
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.rejectAccess(parameters)
             if (config.emails_enabled && response) {
-                // todo implement email notification
-                // await sendApprovalNotification(response.email, template_params);
-                return response;
+                let userData = await neo4j.getUser({userID: parameters.userID});
+                let template_params = {
+                    firstName: userData.firstName,
+                    lastName: userData.lastName
+                }
+                await sendRejectionNotification(userData.email, template_params);
             }
             return response;
         }
