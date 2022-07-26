@@ -207,7 +207,7 @@ const seedInit = async () => {
     //Check arms
 }
 
-const registerUser = async (parameters, _) => {
+const registerUser = async (parameters, context) => {
     formatParams(parameters.userInfo);
     const task = async () => {
         inspectValidUserOrThrow(parameters);
