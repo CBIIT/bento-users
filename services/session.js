@@ -1,6 +1,8 @@
 const session = require('express-session');
 const {randomBytes} = require("crypto");
 const config = require('../config');
+const UserBuilder = require("../model/user");
+const Session = require("../model/session");
 const MySQLStore = require('express-mysql-session')(session);
 
 function createSession({ sessionSecret, session_timeout } = {}) {
@@ -22,6 +24,12 @@ function createSession({ sessionSecret, session_timeout } = {}) {
     });
 }
 
+const saveUserInfoSession = (session, userInfo)=> {
+    const user = UserBuilder.createUser(userInfo);
+    Session.saveUserInfo(session, user);
+}
+
 module.exports = {
-    createSession
+    createSession,
+    saveUserInfoSession
 };
