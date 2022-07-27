@@ -47,17 +47,23 @@ function asArray(values = []) {
 
 const notifyTemplate = async (userInfo, sendAdmin, sendUser) => {
     // send admin notification
-    if (sendAdmin) {
-        const adminEmails = await getAdminEmails();
-        if (adminEmails && adminEmails.length > 0) await sendAdmin(adminEmails, {});
-        else console.error("Admin email is not found, please check if administrator user existed");
+    const notifyAdmin = async () => {
+        if (sendAdmin) {
+            const adminEmails = await getAdminEmails();
+            if (adminEmails && adminEmails.length > 0) await sendAdmin(adminEmails, {});
+            else console.error("Admin email is not found, please check if administrator user existed");
+        }
     }
-    if (sendUser)  {
-        await sendUser(userInfo.email, {
-            firstName: userInfo.firstName,
-            lastName: userInfo.lastName
-        });
+
+    const notifyUser = async () => {
+        if (sendUser)  {
+            await sendUser(userInfo.email, {
+                firstName: userInfo.firstName,
+                lastName: userInfo.lastName
+            })
+        }
     }
+    await Promise.all([notifyAdmin(), notifyUser()])
 }
 
 module.exports = { sendNotification, notifyTemplate }
