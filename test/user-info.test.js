@@ -18,7 +18,7 @@ describe('User Class Test', () => {
 
     test('/user create', () => {
 
-        const acl = ['a', 'b', 'c'];
+        const acl = [{armID: 'a'}, {armID: 'b'}, {armID: 'c'}];
         const role = MEMBER;
         const status = NONE;
         const organization = 'test-research';
@@ -29,7 +29,7 @@ describe('User Class Test', () => {
             .setStatus(status)
             .setOrganization(organization)
             .build();
-        expect(user.getACL()).toStrictEqual(acl);
+        expect(user.getACL()).toStrictEqual(['a', 'b', 'c']);
         expect(user.getOrganization()).toStrictEqual(organization);
         expect(user.getRole()).toStrictEqual(role);
         expect(user.getStatus()).toStrictEqual(status);
