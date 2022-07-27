@@ -12,6 +12,7 @@ const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
 const yaml = require('js-yaml');
 const fs = require('fs');
+const Session = require("../model/session");
 
 
 async function execute(fn) {
@@ -64,6 +65,7 @@ const getMyUser = async (_, context) => {
     const task = async () => {
         if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
         let result = await neo4j.getMyUser(context.userInfo);
+        Session.saveUserInfo(context, result);
         // store user if not exists in db
         if (!result) {
             const user = UserBuilder.createUser(context.userInfo);

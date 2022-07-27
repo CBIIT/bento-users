@@ -1,3 +1,6 @@
+const ACL = require("./acl");
+const {NON_MEMBER} = require("../constants/user-constant");
+
 class User {
     constructor(firstName, lastName, email, idp, role, status, organization, acl) {
         this._firstName = firstName;
@@ -32,7 +35,8 @@ class UserBuilder {
     }
 
     setRole(role) {
-        this._role = (role) ? role : '';
+        // New user assigned as role of NON_MEMBER
+        this._role = (role) ? role : NON_MEMBER;
         return this
     }
 
@@ -40,9 +44,10 @@ class UserBuilder {
         this._status = (status) ? status : '';
         return this
     }
-
-    setACL(acl) {
-        this._acl = (acl) && Array.isArray(acl) ? acl : [];
+    // ACL stores a list of Arm id
+    setACL(arms) {
+        const acl = ACL.createACLFromArms(arms);
+        this._acl = acl.getACL();
         return this
     }
 
@@ -59,7 +64,7 @@ class UserBuilder {
     static createUser(userInfo) {
         return new UserBuilder(userInfo.firstName, userInfo.lastName, userInfo.email, userInfo.idp)
             .setRole(userInfo.role)
-            .setStatus(userInfo.status)
+            .setStatus(userInfo.userStatus)
             .setOrganization(userInfo.organization)
             .setACL(userInfo.acl)
             .build();
