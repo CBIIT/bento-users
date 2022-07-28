@@ -62,20 +62,17 @@ const validator = {
 }
 
 const getMyUser = async (_, context) => {
-    const task = async () => {
-        if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
-        let result = await neo4j.getMyUser(context.userInfo);
-        // store user if not exists in db
-        if (!result) {
-            saveUserInfoToSession(context, context.userInfo);
-            // no email notification for auto-generated user
-            const user = UserBuilder.createUser(context.userInfo);
-            return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
-        }
-        saveUserInfoToSession(context, result);
-        return result;
+    if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+    let result = await neo4j.getMyUser(context.userInfo);
+    // store user if not exists in db
+    if (!result) {
+        saveUserInfoToSession(context, context.userInfo);
+        // no email notification for auto-generated user
+        const user = UserBuilder.createUser(context.userInfo);
+        return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
     }
-    return await execute(task);
+    saveUserInfoToSession(context, result);
+    return result;
 }
 
 const getUser = async (parameters, context) => {
