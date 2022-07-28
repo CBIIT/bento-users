@@ -1,5 +1,4 @@
 const {NON_MEMBER} = require("../constants/user-constant");
-const Arm = require("./arm");
 const ArmAccess = require("./arm-access");
 
 class User {
@@ -47,8 +46,7 @@ class UserBuilder {
     }
     // ACL stores a list of Arm id
     setACL(arms) {
-        const armArr = Arm.createArmArray(arms);
-        this._acl = ArmAccess.getApprovedArmIDs(armArr);
+        this._acl = (arms) && Array.isArray(arms) ? arms : [];
         return this
     }
 
@@ -67,7 +65,7 @@ class UserBuilder {
             .setRole(userInfo.role)
             .setStatus(userInfo.userStatus)
             .setOrganization(userInfo.organization)
-            .setACL(userInfo.acl)
+            .setACL(ArmAccess.createArmAccessArray(userInfo.acl))
             .build();
     }
 

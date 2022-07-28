@@ -1,3 +1,4 @@
+const {getApprovedArmIDs} = require("../services/arm-service");
 class Session {
     constructor(session) {
         this._role = session.role ? session.role : "";
@@ -6,7 +7,7 @@ class Session {
     }
 
     static saveUserInfo(session, user) {
-        session.userInfo.acl = user.getACL();
+        session.userInfo.acl = getApprovedArmIDs(user.getACL());
         session.userInfo.role = user.getRole();
         session.userInfo.userStatus = user.getStatus();
         return new Session(session.userInfo);
