@@ -1,5 +1,6 @@
-const ACL = require("./acl");
 const {NON_MEMBER} = require("../constants/user-constant");
+const Arm = require("./arm");
+const ArmAccess = require("./arm-access");
 
 class User {
     constructor(firstName, lastName, email, idp, role, status, organization, acl) {
@@ -46,8 +47,8 @@ class UserBuilder {
     }
     // ACL stores a list of Arm id
     setACL(arms) {
-        const acl = ACL.createACLFromArms(arms);
-        this._acl = acl.getACL();
+        const armArr = Arm.createArmArray(arms);
+        this._acl = ArmAccess.getApprovedArmIDs(armArr);
         return this
     }
 
