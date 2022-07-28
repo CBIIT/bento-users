@@ -12,7 +12,7 @@ const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
 const yaml = require('js-yaml');
 const fs = require('fs');
-const {saveUserInfoSession} = require("../services/session");
+const {saveUserInfoToSession} = require("../services/session");
 
 
 async function execute(fn) {
@@ -67,12 +67,12 @@ const getMyUser = async (_, context) => {
         let result = await neo4j.getMyUser(context.userInfo);
         // store user if not exists in db
         if (!result) {
-            saveUserInfoSession(context, context.userInfo);
+            saveUserInfoToSession(context, context.userInfo);
             // no email notification for auto-generated user
             const user = UserBuilder.createUser(context.userInfo);
             return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
         }
-        saveUserInfoSession(context, result);
+        saveUserInfoToSession(context, result);
         return result;
     }
     return await execute(task);

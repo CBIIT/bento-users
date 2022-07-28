@@ -24,12 +24,12 @@ function createSession({ sessionSecret, session_timeout } = {}) {
     });
 }
 
-const saveUserInfoSession = (session, userInfo)=> {
+const saveUserInfoToSession = (session, userInfo)=> {
     const user = UserBuilder.createUser(userInfo);
     Session.saveUserInfo(session, user);
 }
 
 module.exports = {
     createSession,
-    saveUserInfoSession
+    saveUserInfoToSession
 };
