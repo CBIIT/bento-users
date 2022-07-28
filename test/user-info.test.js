@@ -18,7 +18,7 @@ describe('User Class Test', () => {
 
     test('/user create', () => {
 
-        const acl = ['a', 'b', 'c'];
+        const acl = [{armID: 'a'}, {armID: 'b'}, {armID: 'c'}];
         const role = MEMBER;
         const status = NONE;
         const organization = 'test-research';

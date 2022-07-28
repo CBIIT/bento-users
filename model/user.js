@@ -1,3 +1,6 @@
+const {NON_MEMBER} = require("../constants/user-constant");
+const ArmAccess = require("./arm-access");
+
 class User {
     constructor(firstName, lastName, email, idp, role, status, organization, acl) {
         this._firstName = firstName;
@@ -32,7 +35,8 @@ class UserBuilder {
     }
 
     setRole(role) {
-        this._role = (role) ? role : '';
+        // New user assigned as role of NON_MEMBER
+        this._role = (role) ? role : NON_MEMBER;
         return this
     }
 
@@ -59,9 +63,10 @@ class UserBuilder {
     static createUser(userInfo) {
         return new UserBuilder(userInfo.firstName, userInfo.lastName, userInfo.email, userInfo.idp)
             .setRole(userInfo.role)
-            .setStatus(userInfo.status)
+            .setStatus(userInfo.userStatus)
             .setOrganization(userInfo.organization)
-            .setACL(userInfo.acl)
+            // acl is a list of Arm
+            .setACL(ArmAccess.createArmAccessArray(userInfo.acl))
             .build();
     }
 

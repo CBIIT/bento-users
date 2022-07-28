@@ -1,6 +1,6 @@
 const {requestAccess:reqArmAccess} = require("../../data-management/data-interface");
 const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessService, getMyUser, getUser:getUserService,
-    searchValidRequestArm
+    searchValidRequestArm, getAdminEmails
 } = require("../../data-management/neo4j-service");
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
@@ -82,6 +82,7 @@ describe('arm access Test', () => {
     test('/insert arm request', async () => {
         notifyUserArmAccessRequest.mockReturnValue(Promise.resolve());
         notifyAdminArmAccessRequest.mockReturnValue(Promise.resolve());
+        getAdminEmails.mockReturnValue(Promise.resolve(['test@nih.gov']));
         getMyUser.mockReturnValue(mockAccessResult);
         updateMyUserService.mockReturnValue(mockUserName);
         requestArmAccessService.mockReturnValue(Promise.resolve(mockAccessResult));
@@ -96,10 +97,8 @@ describe('arm access Test', () => {
         }
         // Return mock user
         expect(await reqArmAccess(parameters,fakeSession)).toBe(mockUserName);
-        setImmediate(() => {
-            expect(notifyUserArmAccessRequest).toBeCalledTimes(1);
-            expect(notifyAdminArmAccessRequest).toBeCalledTimes(1);
-        });
+        expect(notifyUserArmAccessRequest).toBeCalledTimes(1);
+        expect(notifyAdminArmAccessRequest).toBeCalledTimes(1);
     });
 
     test('/test optional firstname & lastname updateMyUserService', async () => {
