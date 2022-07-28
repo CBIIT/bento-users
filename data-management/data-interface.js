@@ -12,6 +12,10 @@ const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
 const yaml = require('js-yaml');
 const fs = require('fs');
+const LoginCondition = require("../model/valid-conditions/login-condition");
+const {ArmParameterCondition, ArmCondition} = require("../model/valid-conditions/arm-conditions");
+const AdminCondition = require("../model/valid-conditions/admin-condition");
+const idpCondition = require("../model/valid-conditions/idp-condition");
 
 
 async function execute(fn) {
@@ -41,28 +45,15 @@ async function checkAdminPermissions(userInfo) {
     }
 }
 
-const validator = {
-    isValidLoginOrThrow: (userInfo) => {
-        if (!verifyUserInfo(userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
-    },
-    isValidLogin: (userInfo) => {
-        return verifyUserInfo(userInfo);
-    },
-    isValidArmOrThrow: (arms, armIDs) => {
-        if (arms.length === 0 || arms.length != armIDs.length) throw new Error(errorName.INVALID_REQUEST_ARM);
-    },
-    isValidIdpOrThrow: (idp)=> {
-        let copyIdp = idp.slice();
-        if (!isElementInArray(valid_idps, copyIdp)) throw new Error(errorName.INVALID_IDP)
-    },
-    isValidReqArmInputOrThrow: (p)=> { // only a list of arm ids required
-        if (!p.userInfo.armIDs) throw new Error(errorName.MISSING_ARM_REQUEST_INPUTS)
-    }
+const isValidOrThrow = (conditions) => {
+    conditions.forEach((condition)=> {
+        condition.isValidOrThrow();
+    });
 }
 
 const getMyUser = async (_, context) => {
     const task = async () => {
-        if (!verifyUserInfo(context.userInfo)) throw new Error(errorName.NOT_LOGGED_IN);
+        isValidOrThrow([new LoginCondition(context.userInfo)]);
         let result = await neo4j.getMyUser(context.userInfo);
         // store user if not exists in db
         if (!result) {
@@ -130,22 +121,12 @@ const listArms = async (input, context) => {
     }
 }
 
-const inspectValidUserOrThrow = (parameters)=> {
-    if (validator.isValidLogin(parameters.userInfo)) {
-        validator.isValidIdpOrThrow(parameters.userInfo.idp);
-    } else {
-        throw new Error(errorName.MISSING_INPUTS);
-    }
-}
-
 async function requestAccess(parameters, context) {
-    validator.isValidLoginOrThrow(context.userInfo);
-    validator.isValidReqArmInputOrThrow(parameters) ;
-
+    isValidOrThrow([new LoginCondition(context.userInfo), new ArmParameterCondition(parameters)]);
     const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);
     // inspect request-arms in the existing arms
     const arms = await searchValidReqArms({armIDs: reqArmIDs}, context);
-    validator.isValidArmOrThrow(arms, reqArmIDs);
+    isValidOrThrow([new ArmCondition(arms, reqArmIDs)]);
 
     // create request arm access
     const accessRequest = await addArmRequestAccess(reqArmIDs, context);
@@ -170,7 +151,7 @@ const createReqArmParams = (armIDs) => {
 
 const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
-    inspectValidUserOrThrow(context);
+    isValidOrThrow([new AdminCondition(context.role), new idpCondition(context.idp)]);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
     // Send email notification after success
     if (response) await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
@@ -210,7 +191,7 @@ const seedInit = async () => {
 const registerUser = async (parameters, context) => {
     formatParams(parameters.userInfo);
     const task = async () => {
-        inspectValidUserOrThrow(parameters);
+        isValidOrThrow([new idpCondition(parameters.userInfo)]);
         if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
         let generatedInfo = {
@@ -358,7 +339,7 @@ const editUser = async (parameters, context) => {
 
 const updateMyUser = async (parameters, context) => {
     formatParams(parameters);
-    validator.isValidLoginOrThrow(context.userInfo);
+    isValidOrThrow([new LoginCondition(context.userInfo)]);
     return await neo4j.updateMyUser({...parameters.userInfo}, {...context.userInfo});
 }
 
