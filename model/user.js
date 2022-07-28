@@ -44,9 +44,9 @@ class UserBuilder {
         this._status = (status) ? status : '';
         return this
     }
-    // ACL stores a list of Arm id
-    setACL(arms) {
-        this._acl = (arms) && Array.isArray(arms) ? arms : [];
+
+    setACL(acl) {
+        this._acl = (acl) && Array.isArray(acl) ? acl : [];
         return this
     }
 
@@ -65,6 +65,7 @@ class UserBuilder {
             .setRole(userInfo.role)
             .setStatus(userInfo.userStatus)
             .setOrganization(userInfo.organization)
+            // acl is a list of Arm
             .setACL(ArmAccess.createArmAccessArray(userInfo.acl))
             .build();
     }
