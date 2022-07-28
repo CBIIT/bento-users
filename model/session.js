@@ -1,4 +1,4 @@
-const {getApprovedArmIDs} = require("../services/arm-service");
+const {getApprovedArmIDs} = require("../services/arm-access");
 class Session {
     constructor(session) {
         this._role = session.role ? session.role : "";

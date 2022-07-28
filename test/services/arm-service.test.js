@@ -1,6 +1,6 @@
 const {REQUESTED, APPROVED} = require("../../constants/access-constant");
 const ArmAccess = require("../../model/arm-access");
-const {getApprovedArmIDs} = require("../../services/arm-service");
+const {getApprovedArmIDs} = require("../../services/arm-access");
 
 describe('arm service', () => {
     test('/create arm model', ()=> {
