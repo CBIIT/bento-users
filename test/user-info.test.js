@@ -29,7 +29,7 @@ describe('User Class Test', () => {
             .setStatus(status)
             .setOrganization(organization)
             .build();
-        expect(user.getACL()).toStrictEqual(['a', 'b', 'c']);
+        expect(user.getACL()).toStrictEqual(acl);
         expect(user.getOrganization()).toStrictEqual(organization);
         expect(user.getRole()).toStrictEqual(role);
         expect(user.getStatus()).toStrictEqual(status);
