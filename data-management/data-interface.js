@@ -10,6 +10,9 @@ const UserBuilder = require("../model/user");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
+const yaml = require('js-yaml');
+const fs = require('fs');
+
 
 async function execute(fn) {
     try {
@@ -135,7 +138,6 @@ const inspectValidUserOrThrow = (parameters)=> {
     }
 }
 
-
 async function requestAccess(parameters, context) {
     validator.isValidLoginOrThrow(context.userInfo);
     validator.isValidReqArmInputOrThrow(parameters) ;
@@ -174,6 +176,35 @@ const addArmRequestAccess = async (armIDs, context) => {
     if (response) await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
     if (response) return response;
     throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+}
+
+const seedInit = async () => {
+    //Check admins
+    let seedData = undefined;
+    if ((await neo4j.getAdminEmails()).length < 1){
+        try{
+            seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
+            let admin = {...seedData.admin, ...{userID: v4(), role: 'admin', status: 'active'}};
+            formatParams(admin);
+            await neo4j.registerUser(admin);
+            console.log("Seed admin initialized in database");
+        } catch (err){
+            console.error("Seed admin initialization failed: "+err);
+        }
+    }
+    if ((await neo4j.listArms()).length < 1){
+       try{
+           if (seedData === undefined){
+               seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
+           }
+           let arms = seedData.arms;
+           await neo4j.createArms(arms);
+           console.log("Seed arms initialized in database");
+       } catch (err){
+           console.error("Seed arms initialization failed: "+err);
+       }
+    }
+    //Check arms
 }
 
 const registerUser = async (parameters, context) => {
@@ -218,9 +249,12 @@ const approveAccess = async (parameters, context) => {
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.approveAccess(parameters)
             if (config.emails_enabled && response) {
-                // todo implement email notification
-                // await sendApprovalNotification(response.email, template_params);
-                return response;
+                let userData = await neo4j.getUser({userID: parameters.userID});
+                let template_params = {
+                    firstName: userData.firstName,
+                    lastName: userData.lastName
+                }
+                await sendApprovalNotification(userData.email, template_params);
             }
             return response;
         }
@@ -246,9 +280,12 @@ const rejectAccess = async (parameters, context) => {
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.rejectAccess(parameters)
             if (config.emails_enabled && response) {
-                // todo implement email notification
-                // await sendApprovalNotification(response.email, template_params);
-                return response;
+                let userData = await neo4j.getUser({userID: parameters.userID});
+                let template_params = {
+                    firstName: userData.firstName,
+                    lastName: userData.lastName
+                }
+                await sendRejectionNotification(userData.email, template_params);
             }
             return response;
         }
@@ -338,6 +375,9 @@ function formatParams(params){
     if (params.accessStatus){
         params.accessStatus = params.accessStatus.toLowerCase();
     }
+    if (params.idp){
+        params.idp = params.idp.toLowerCase();
+    }
 }
 
 function verifyUserInfo(userInfo) {
@@ -356,7 +396,8 @@ module.exports = {
     approveAccess: approveAccess,
     updateMyUser: updateMyUser,
     searchValidReqArms,
-    requestAccess
+    requestAccess,
+    seedInit: seedInit
     // updateMyUser: updateMyUser,
     // deleteUser: deleteUser,
     // disableUser: disableUser,

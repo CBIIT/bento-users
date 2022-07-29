@@ -1,0 +1,11 @@
+admin:
+  firstName: "Seed Admin First"
+  lastName: "Seed Admin Last"
+  email: "seed.admin@email.com"
+  idp: "seed-idp"
+  organization: "Seed organization"
+arms:
+  - armID: "1"
+    armName: "Seed Arm 1"
+  - armID: "2"
+    armName: "Seed Arm 2"

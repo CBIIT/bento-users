@@ -15,8 +15,6 @@ Following environmental variables are needed
 # Test-data loading configuration
 - DATA_LOADING_MODE : (for testing only) set to "overwrite" to wipe the database before loading
 - DATA_FILE : (for testing only) file containing data to load into the database for testing
-# Testing
-- TEST_EMAIL : The email to be logged in if "test-idp" is specified as the IDP
 # MYSQL configuration
 - MYSQL_HOST : The host URL of the MYSQL database
 - MYSQL_PORT : The port of the MYSQL database
@@ -29,4 +27,5 @@ Following environmental variables are needed
 # Additional configuration for email server
 - EMAIL_USER: email server's username as an additional parameter
 - EMAIL_PASSWORD: email server's password as an additional parameter
-- EMAIL_SERVICE_EMAIL: 
+# Seed Data
+- SEED_DATA_FILE: A yaml file containing data for a seed admin and seed arms that will be loaded when no admins nor arms are found (example file: yaml/seed-data-example.yaml)
