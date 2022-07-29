@@ -153,7 +153,7 @@ const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
     isValidOrThrow([new idpCondition(context.userInfo)]);
     // Admin can't request arm access
-    const adminCondition = new AdminCondition(context.role);
+    const adminCondition = new AdminCondition(context.userInfo);
     if (adminCondition.isValid()) adminCondition.throwError();
 
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
