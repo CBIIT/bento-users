@@ -4,9 +4,14 @@ class LoginCondition {
         this._userInfo = userInfo;
     }
 
-    isValidOrThrow() {
-        if (!this._userInfo || !this._userInfo.email || !this._userInfo.idp) throw new Error(errorName.NOT_LOGGED_IN);
+    isValid() {
+        return this._userInfo && this._userInfo.email && this._userInfo.idp
     }
+
+    throwError() {
+        throw new Error(errorName.NOT_LOGGED_IN);
+    }
+
 }
 
 module.exports = LoginCondition

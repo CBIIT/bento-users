@@ -7,9 +7,14 @@ class idpCondition extends InputCondition {
         this._idp = userInfo.idp;
     }
 
-    isValidOrThrow() {
-        if (!isElementInArray(valid_idps, this._idp)) throw new Error(errorName.INVALID_IDP);
+    isValid() {
+        return isElementInArray(valid_idps, this._idp);
     }
+
+    throwError() {
+        throw new Error(errorName.INVALID_IDP);
+    }
+
 }
 
 module.exports = idpCondition

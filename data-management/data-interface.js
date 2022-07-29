@@ -1,11 +1,11 @@
 const {v4} = require('uuid')
 const neo4j = require('./neo4j-service')
-const {errorName, valid_idps, user_roles, user_statuses} = require("./graphql-api-constants");
+const {errorName, user_roles, user_statuses} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
 const {NONE, NON_MEMBER} = require("../constants/user-constant");
-const {isElementInArray, getUniqueArr} = require("../util/string-util");
+const {getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
@@ -47,7 +47,7 @@ async function checkAdminPermissions(userInfo) {
 
 const isValidOrThrow = (conditions) => {
     conditions.forEach((condition)=> {
-        condition.isValidOrThrow();
+        if (!condition.isValid()) condition.throwError();
     });
 }
 
@@ -151,7 +151,11 @@ const createReqArmParams = (armIDs) => {
 
 const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
-    isValidOrThrow([new AdminCondition(context.role), new idpCondition(context.idp)]);
+    isValidOrThrow([new idpCondition(context.userInfo)]);
+    // Admin can't request arm access
+    const adminCondition = new AdminCondition(context.role);
+    if (adminCondition.isValid()) adminCondition.throwError();
+
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
     // Send email notification after success
     if (response) await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);

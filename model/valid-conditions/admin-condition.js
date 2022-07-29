@@ -8,8 +8,12 @@ class AdminCondition extends InputCondition {
         this._role = userInfo.role;
     }
 
-    isValidOrThrow() {
-        if (isCaseInsensitiveEqual(this._role, ADMIN)) throw new Error(errorName.INVALID_REQUEST_ARM);
+    isValid() {
+        return isCaseInsensitiveEqual(this._role, ADMIN);
+    }
+
+    throwError() {
+        throw new Error(errorName.INVALID_ACCESS_REQUEST);
     }
 }
 
