@@ -16,6 +16,7 @@ const LoginCondition = require("../model/valid-conditions/login-condition");
 const {ArmParameterCondition, ArmCondition} = require("../model/valid-conditions/arm-conditions");
 const AdminCondition = require("../model/valid-conditions/admin-condition");
 const idpCondition = require("../model/valid-conditions/idp-condition");
+const {saveUserInfoToSession} = require("../services/session");
 
 
 async function execute(fn) {
@@ -52,18 +53,17 @@ const isValidOrThrow = (conditions) => {
 }
 
 const getMyUser = async (_, context) => {
-    const task = async () => {
-        isValidOrThrow([new LoginCondition(context.userInfo)]);
-        let result = await neo4j.getMyUser(context.userInfo);
-        // store user if not exists in db
-        if (!result) {
-            const user = UserBuilder.createUser(context.userInfo);
-            // no email notification for auto-generated user
-            return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
-        }
-        return result;
+    isValidOrThrow([new LoginCondition(context.userInfo)]);
+    let result = await neo4j.getMyUser(context.userInfo);
+    // store user if not exists in db
+    if (!result) {
+        saveUserInfoToSession(context, context.userInfo);
+        // no email notification for auto-generated user
+        const user = UserBuilder.createUser(context.userInfo);
+        return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
     }
-    return await execute(task);
+    saveUserInfoToSession(context, result);
+    return result;
 }
 
 const getUser = async (parameters, context) => {
