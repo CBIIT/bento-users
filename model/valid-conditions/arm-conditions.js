@@ -1,5 +1,5 @@
 const {errorName} = require("../../data-management/graphql-api-constants");
-class ArmRequestCondition {
+class ArmExistCondition {
     // Request arms are examined with arms in db
     constructor(arms, reqArmIDs) {
         this._arms = arms;
@@ -15,7 +15,7 @@ class ArmRequestCondition {
     }
 }
 
-class ArmMissingParameterCondition {
+class ArmRequestParamsCondition {
     constructor(parameters) {
         this._parameters = parameters;
     }
@@ -31,6 +31,6 @@ class ArmMissingParameterCondition {
 }
 
 module.exports = {
-    ArmMissingParameterCondition,
-    ArmRequestCondition
+    ArmRequestParamsCondition,
+    ArmExistCondition
 }
