@@ -5,6 +5,7 @@ const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessServic
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
 const {REQUESTED} = require("../../constants/access-constant");
+const {ADMIN} = require("../../constants/user-constant");
 // Create Data management mock
 jest.mock("../../data-management/neo4j-service");
 // Create email notification mock object
@@ -130,4 +131,26 @@ describe('arm access Test', () => {
             .rejects
             .toThrow(errorName.INVALID_REQUEST_ARM);
     });
+
+    // throw invalid arm access
+    test('/admin can not request arm access', async () => {
+        notifyUserArmAccessRequest.mockReturnValue(Promise.resolve());
+        notifyAdminArmAccessRequest.mockReturnValue(Promise.resolve());
+        searchValidRequestArm.mockReturnValue([1]);
+        let parameters = {
+            userInfo: {
+                firstName: 'Bento',
+                lastName: 'test',
+                armIDs: [1]
+            }
+        }
+        let session = JSON.parse(JSON.stringify(fakeSession));
+        session.userInfo.role = ADMIN;
+        await expect(reqArmAccess(parameters, session))
+            .rejects
+            .toThrow(errorName.INVALID_ACCESS_REQUEST);
+        expect(notifyUserArmAccessRequest).toBeCalledTimes(0);
+        expect(notifyAdminArmAccessRequest).toBeCalledTimes(0);
+    });
+
 });
