@@ -1,12 +1,34 @@
-const {APPROVED, REJECTED, REQUESTED} = require("../constants/access-constant");
+const {APPROVED, REQUESTED} = require("../constants/access-constant");
 const {v4} = require('uuid')
+const Arm = require("./arm");
 class ArmAccess {
+
+    constructor(arm, accessStatus) {
+        this._arm = arm;
+        this._accessStatus = accessStatus;
+    }
 
     static createRequestAccess() {
         let arm = new ArmAccess();
         arm._accessStatus = REQUESTED;
         arm._requestID = v4();
         return arm;
+    }
+
+    static createArmAccessArray(arms) {
+        const result = [];
+        const armArr  = (arms) && Array.isArray(arms) ? arms : [];
+        Array.from(armArr)
+            .forEach((arm) => {
+                if (arm.accessStatus && arm.armID) {
+                    result.push(
+                        new ArmAccess(
+                            new Arm(arm.armID),
+                            arm.accessStatus)
+                    )
+                }
+            });
+        return result;
     }
 
     // reject access request if previously approved or requested access
@@ -22,6 +44,9 @@ class ArmAccess {
         return this._accessStatus;
     }
 
+    getArm() {
+        return this._arm;
+    }
 }
 
 module.exports = ArmAccess
