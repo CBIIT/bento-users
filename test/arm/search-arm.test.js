@@ -13,7 +13,7 @@ describe('register user API test', () => {
 
     const fakeSession = {
         userInfo: {
-            email: 'young.yoo@nih.gov',
+            email: 'bento.test@nih.gov',
             idp: 'nih',
             firstName: 'test',
             lastName: 'test',

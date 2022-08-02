@@ -13,7 +13,7 @@ const {notifyTemplate} = require("../services/notify");
 const yaml = require('js-yaml');
 const fs = require('fs');
 const LoginCondition = require("../model/valid-conditions/login-condition");
-const {ArmParameterCondition, ArmCondition} = require("../model/valid-conditions/arm-conditions");
+const {ArmMissingParameterCondition, ArmRequestCondition} = require("../model/valid-conditions/arm-conditions");
 const AdminCondition = require("../model/valid-conditions/admin-condition");
 const idpCondition = require("../model/valid-conditions/idp-condition");
 const {saveUserInfoToSession} = require("../services/session");
@@ -122,11 +122,11 @@ const listArms = async (input, context) => {
 }
 
 async function requestAccess(parameters, context) {
-    isValidOrThrow([new LoginCondition(context.userInfo), new ArmParameterCondition(parameters)]);
+    isValidOrThrow([new LoginCondition(context.userInfo), new ArmMissingParameterCondition(parameters)]);
     const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);
     // inspect request-arms in the existing arms
     const arms = await searchValidReqArms({armIDs: reqArmIDs}, context);
-    isValidOrThrow([new ArmCondition(arms, reqArmIDs)]);
+    isValidOrThrow([new ArmRequestCondition(arms, reqArmIDs)]);
 
     // create request arm access
     const accessRequest = await addArmRequestAccess(reqArmIDs, context);

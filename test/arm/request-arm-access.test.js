@@ -5,6 +5,7 @@ const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessServic
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
 const {REQUESTED} = require("../../constants/access-constant");
+const {ADMIN} = require("../../constants/user-constant");
 // Create Data management mock
 jest.mock("../../data-management/neo4j-service");
 // Create email notification mock object
@@ -36,8 +37,8 @@ describe('arm access Test', () => {
         let parameters = {
             userID: 8,
             userInfo: {
-                firstName: 'Young',
-                lastName: 'Yoo',
+                firstName: 'bento',
+                lastName: 'test',
                 armIDs: ["arm"]
             }
         }
@@ -52,8 +53,8 @@ describe('arm access Test', () => {
     test('/test arm request with missing input', async () => {
         let parameters = {
             userInfo: {
-                firstName: 'Young',
-                lastName: 'Yoo',
+                firstName: 'Bento',
+                lastName: 'test',
                 // userId: 8,
                 status: REQUESTED
             }
@@ -90,8 +91,8 @@ describe('arm access Test', () => {
         searchValidRequestArm.mockReturnValue([1]);
         let parameters = {
             userInfo: {
-                firstName: 'Young',
-                lastName: 'Yoo',
+                firstName: 'Bento',
+                lastName: 'test',
                 armIDs: [1]
             }
         }
@@ -121,8 +122,8 @@ describe('arm access Test', () => {
         let parameters = {
             userID: 8,
             userInfo: {
-                firstName: 'Young',
-                lastName: 'Yoo',
+                firstName: 'Bento',
+                lastName: 'test',
                 armIDs: ["test1", "test2"]
             }
         }
@@ -130,4 +131,27 @@ describe('arm access Test', () => {
             .rejects
             .toThrow(errorName.INVALID_REQUEST_ARM);
     });
+
+    // throw invalid arm access
+    test('/admin can not request arm access', async () => {
+        notifyUserArmAccessRequest.mockReturnValue(Promise.resolve());
+        notifyAdminArmAccessRequest.mockReturnValue(Promise.resolve());
+        searchValidRequestArm.mockReturnValue([1]);
+        let parameters = {
+            userInfo: {
+                firstName: 'Bento',
+                lastName: 'test',
+                armIDs: [1]
+            }
+        }
+        let session = JSON.parse(JSON.stringify(fakeSession));
+        session.userInfo.role = ADMIN;
+        await expect(reqArmAccess(parameters, session))
+            .rejects
+            .toThrow(errorName.INVALID_ACCESS_REQUEST);
+        expect(notifyUserArmAccessRequest).toBeCalledTimes(0);
+        expect(notifyAdminArmAccessRequest).toBeCalledTimes(0);
+    });
+
+    // todo admin can't request arm
 });

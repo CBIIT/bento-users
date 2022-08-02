@@ -1,12 +1,13 @@
 const {errorName} = require("../../data-management/graphql-api-constants");
-class ArmCondition {
-    constructor(arms, armIDs) {
+class ArmRequestCondition {
+    // Request arms are examined with arms in db
+    constructor(arms, reqArmIDs) {
         this._arms = arms;
-        this._armIDs = armIDs;
+        this._reqArmIDs = reqArmIDs;
     }
 
     isValid() {
-        return this._arms.length > 0 && this._arms.length === this._armIDs.length;
+        return this._arms.length > 0 && this._arms.length === this._reqArmIDs.length;
     }
 
     throwError() {
@@ -14,7 +15,7 @@ class ArmCondition {
     }
 }
 
-class ArmParameterCondition {
+class ArmMissingParameterCondition {
     constructor(parameters) {
         this._parameters = parameters;
     }
@@ -30,6 +31,6 @@ class ArmParameterCondition {
 }
 
 module.exports = {
-    ArmParameterCondition,
-    ArmCondition
+    ArmMissingParameterCondition,
+    ArmRequestCondition
 }

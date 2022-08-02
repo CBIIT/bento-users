@@ -38,7 +38,7 @@ exports.errorType = {
         statusCode: 400
     },
     MISSING_ARM_REQUEST_INPUTS: {
-        message: "Inputs for first name or last name or arm list are required inputs for arm request access",
+        message: "Arm id(s) is required input for arm request access",
         statusCode: 400
     },
     INVALID_IDP: {

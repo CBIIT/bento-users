@@ -15,7 +15,7 @@ describe('email template reading error', () => {
         yaml.load.mockReturnValue(Promise.resolve());
         jest.spyOn(console, 'error').mockImplementation(() => {});
 
-        await notifyAdminArmAccessRequest(['young.yoo@nih.gov'], templates);
+        await notifyAdminArmAccessRequest(['bento.test@nih.gov'], templates);
         expect(sendNotification).toBeCalledTimes(0);
         expect(console.error).toBeCalledTimes(1);
     });
