@@ -148,7 +148,7 @@ describe('arm access Test', () => {
         session.userInfo.role = ADMIN;
         await expect(reqArmAccess(parameters, session))
             .rejects
-            .toThrow(errorName.INVALID_ACCESS_REQUEST);
+            .toThrow(errorName.INVALID_ADMIN_ARM_REQUEST);
         expect(notifyUserArmAccessRequest).toBeCalledTimes(0);
         expect(notifyAdminArmAccessRequest).toBeCalledTimes(0);
     });

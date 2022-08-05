@@ -14,9 +14,9 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const LoginCondition = require("../model/valid-conditions/login-condition");
 const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-conditions/arm-conditions");
-const AdminCondition = require("../model/valid-conditions/admin-condition");
 const idpCondition = require("../model/valid-conditions/idp-condition");
 const {saveUserInfoToSession} = require("../services/session");
+const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -140,13 +140,15 @@ const createReqArmParams = (armIDs) => {
     return listParameters;
 }
 
+const rejectAdminArmRequest = (userInfo)=> {
+    const generalUserCondition = new GeneralUserCondition(userInfo);
+    generalUserCondition.throwError = ()=> { throw new Error(errorName.INVALID_ADMIN_ARM_REQUEST); };
+    return generalUserCondition;
+}
+
 const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
-    isValidOrThrow([new idpCondition(context.userInfo)]);
-    // Admin can't request arm access
-    const adminCondition = new AdminCondition(context.userInfo);
-    if (adminCondition.isValid()) adminCondition.throwError();
-
+    isValidOrThrow([new idpCondition(context.userInfo), rejectAdminArmRequest(context.userInfo)]);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
     // Send email notification after success
     if (response) await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);

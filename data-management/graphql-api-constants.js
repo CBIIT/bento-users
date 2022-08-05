@@ -21,7 +21,9 @@ exports.errorName = {
     UNABLE_TO_REQUEST_ARM_ACCESS: 'UNABLE_TO_REQUEST_ARM_ACCESS',
     INVALID_REQUEST_ARM: 'INVALID_REQUEST_ARM',
     MISSING_ARM_REQUEST_INPUTS: 'MISSING_ARM_REQUEST_INPUTS',
-    INVALID_ACCESS_REQUEST: 'INVALID_ACCESS_REQUEST',
+    NOT_GENERAL_USER: 'NON_GENERAL_USER',
+    NOT_ADMIN: 'NOT_ADMIN',
+    INVALID_ADMIN_ARM_REQUEST: 'INVALID_ADMIN_ARM_REQUEST',
 };
 
 exports.errorType = {
@@ -93,8 +95,16 @@ exports.errorType = {
         message: "The request arm does not exist or attempting to request an invalid arm",
         statusCode: 409
     },
-    INVALID_ACCESS_REQUEST: {
-        message: "User is attempting to request an invalid access",
+    NOT_ADMIN: {
+        message: "This user is Admin",
+        statusCode: 409
+    },
+    NOT_GENERAL_USER: {
+        message: "This user is neither Member or Non-Member",
+        statusCode: 409
+    },
+    INVALID_ADMIN_ARM_REQUEST: {
+        message: "Admin is not allowed to request arm-access",
         statusCode: 409
     }
 };
