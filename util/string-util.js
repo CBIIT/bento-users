@@ -1,6 +1,6 @@
 function isCaseInsensitiveEqual(source, target) {
     if (!target || !source) return false;
-    if (source.toLowerCase() === target.toLowerCase()) return true;
+    return source.toLowerCase() === target.toLowerCase();
 }
 
 function isElementInArray(array, target) {

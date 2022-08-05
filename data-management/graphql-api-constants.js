@@ -20,7 +20,9 @@ exports.errorName = {
     UNABLE_TO_REGISTER_USER: 'UNABLE_TO_REGISTER_USER',
     UNABLE_TO_REQUEST_ARM_ACCESS: 'UNABLE_TO_REQUEST_ARM_ACCESS',
     INVALID_REQUEST_ARM: 'INVALID_REQUEST_ARM',
-    MISSING_ARM_REQUEST_INPUTS: 'MISSING_ARM_REQUEST_INPUTS'
+    MISSING_ARM_REQUEST_INPUTS: 'MISSING_ARM_REQUEST_INPUTS',
+    NOT_GENERAL_USER: 'NON_GENERAL_USER',
+    INVALID_ADMIN_ARM_REQUEST: 'INVALID_ADMIN_ARM_REQUEST',
 };
 
 exports.errorType = {
@@ -37,7 +39,7 @@ exports.errorType = {
         statusCode: 400
     },
     MISSING_ARM_REQUEST_INPUTS: {
-        message: "Inputs for first name or last name or arm list are required inputs for arm request access",
+        message: "Arm id(s) is required input for arm request access",
         statusCode: 400
     },
     INVALID_IDP: {
@@ -90,6 +92,14 @@ exports.errorType = {
     },
     INVALID_REQUEST_ARM: {
         message: "The request arm does not exist or attempting to request an invalid arm",
+        statusCode: 409
+    },
+    NOT_GENERAL_USER: {
+        message: "This user is neither Member or Non-Member",
+        statusCode: 409
+    },
+    INVALID_ADMIN_ARM_REQUEST: {
+        message: "Admin is not allowed to request arm-access",
         statusCode: 409
     }
 };
