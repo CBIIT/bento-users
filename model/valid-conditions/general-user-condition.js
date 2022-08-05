@@ -13,7 +13,7 @@ class GeneralUserCondition extends InputCondition {
     }
 
     throwError() {
-        throw new Error(errorName.NOT_ADMIN);
+        throw new Error(errorName.NOT_GENERAL_USER);
     }
 }
 
