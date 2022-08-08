@@ -45,7 +45,7 @@ type UserInfo {
 type Access {
     armID: String
     armName: String
-    "requested, approved, rejected, revoked"
+    "pending, approved, rejected, revoked"
     accessStatus: String
     requestDate: String
     "Name of the admin who approved/rejected this access"

@@ -1,6 +1,6 @@
 module.exports = Object.freeze({
     // arm status
-    REQUESTED: 'requested',
+    PENDING: 'pending',
     APPROVED: 'approved',
     REJECTED: 'rejected',
     REVOKED: 'revoked',

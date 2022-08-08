@@ -4,7 +4,7 @@ const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessServic
 } = require("../../data-management/neo4j-service");
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
-const {REQUESTED} = require("../../constants/access-constant");
+const {PENDING} = require("../../constants/access-constant");
 const {ADMIN} = require("../../constants/user-constant");
 // Create Data management mock
 jest.mock("../../data-management/neo4j-service");
@@ -19,7 +19,7 @@ describe('arm access Test', () => {
     };
 
     const mockAccessResult = {
-        status: "requested",
+        status: PENDING,
         userID: 'xxxxx'
     }
 
@@ -56,7 +56,7 @@ describe('arm access Test', () => {
                 firstName: 'Young',
                 lastName: 'Yoo',
                 // userId: 8,
-                status: REQUESTED
+                status: PENDING
             }
         }
 
