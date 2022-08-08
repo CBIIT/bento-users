@@ -1,4 +1,4 @@
-const {APPROVED, REQUESTED} = require("../constants/access-constant");
+const {APPROVED, PENDING} = require("../constants/access-constant");
 const {v4} = require('uuid')
 const Arm = require("./arm");
 class ArmAccess {
@@ -10,7 +10,7 @@ class ArmAccess {
 
     static createRequestAccess() {
         let arm = new ArmAccess();
-        arm._accessStatus = REQUESTED;
+        arm._accessStatus = PENDING;
         arm._requestID = v4();
         return arm;
     }
@@ -33,7 +33,7 @@ class ArmAccess {
 
     // reject access request if previously approved or requested access
     static rejectRequestAccessStatus() {
-        return [REQUESTED, APPROVED];
+        return [PENDING, APPROVED];
     }
 
     getRequestID() {

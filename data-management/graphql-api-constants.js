@@ -1,7 +1,8 @@
+const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
 exports.valid_idps = valid_idps = ["google", "nih", "login.gov"];
 exports.user_roles = user_roles =['admin', 'member', 'non-member'];
 exports.user_statuses = user_statuses = ['', 'inactive', 'active', 'disabled', 'deleted']; //null also accepted
-exports.access_statuses = access_statuses = ['requested', 'approved', 'rejected', 'revoked'];
+exports.access_statuses = access_statuses = [PENDING, APPROVED, REJECTED, REVOKED];
 
 exports.errorName = {
     INVALID_REVIEW_ARMS: "INVALID_REVIEW_ARMS",

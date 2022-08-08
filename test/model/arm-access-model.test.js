@@ -1,6 +1,6 @@
 const ArmAccess = require("../../model/arm-access");
 const Arm = require("../../model/arm");
-const {APPROVED, REQUESTED} = require("../../constants/access-constant");
+const {APPROVED, PENDING} = require("../../constants/access-constant");
 
 describe('arm access model', () => {
     test('/create arm access model', ()=> {
@@ -14,10 +14,10 @@ describe('arm access model', () => {
 
     test('/create arm access array', ()=> {
         const mockArms = [
-            {armID: "request", accessStatus: REQUESTED},
+            {armID: "request", accessStatus: PENDING},
             {armID: null, accessStatus: null},
-            {armID: null, accessStatus: REQUESTED},
-            {arm: null, access: REQUESTED},
+            {armID: null, accessStatus: PENDING},
+            {arm: null, access: PENDING},
             {armID: "approved", accessStatus: APPROVED}
         ]
 
