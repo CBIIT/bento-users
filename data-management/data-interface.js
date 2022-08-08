@@ -17,7 +17,7 @@ const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-c
 const idpCondition = require("../model/valid-conditions/idp-condition");
 const {saveUserInfoToSession} = require("../services/session");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
-const {PENDING} = require("../constants/access-constant");
+const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -216,7 +216,7 @@ const approveAccess = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['requested', 'rejected', 'revoked'])){
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING, REJECTED, REVOKED])){
             return new Error(errorName.INVALID_REVIEW_ARMS);
         }
         else {
@@ -277,7 +277,7 @@ const revokeAccess = async (parameters, context) => {
             return new Error(errorName.NOT_LOGGED_IN);
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, ['approved'])){
+        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [APPROVED])){
             return new Error(errorName.INVALID_REVOKE_ARMS);
         }
         else {
