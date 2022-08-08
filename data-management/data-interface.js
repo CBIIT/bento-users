@@ -18,6 +18,8 @@ const idpCondition = require("../model/valid-conditions/idp-condition");
 const {saveUserInfoToSession} = require("../services/session");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
+const AdminCondition = require("../model/valid-conditions/admin-conditions");
+const {UserRoleCondition, UserStatusCondition} = require("../model/valid-conditions/user-condition");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -26,16 +28,6 @@ async function checkUnique(email, IDP){
 async function validateInputArms(userID, accessList, accessStatuses) {
     let existingAccess = await neo4j.getAccesses(userID, accessStatuses);
     return accessList.every((a)=>existingAccess.includes(a))
-}
-
-async function checkAdminPermissions(userInfo) {
-    let result = await neo4j.getMyUser(userInfo);
-    try{
-        return result.role === 'admin' && result.userStatus === 'active';
-    }
-    catch (err){
-        return false;
-    }
 }
 
 const isValidOrThrow = (conditions) => {
@@ -60,19 +52,9 @@ const getMyUser = async (_, context) => {
 
 const getUser = async (parameters, context) => {
     try {
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        //Check if not admin
-        if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        }
+        isValidOrThrow([new LoginCondition(context.userInfo), new AdminCondition(context.userInfo)])
         //Execute query
-        else {
-            let result =  await neo4j.getUser(parameters);
-            return result;
-        }
+        return await neo4j.getUser(parameters);
     } catch (err) {
         return err;
     }
@@ -80,19 +62,8 @@ const getUser = async (parameters, context) => {
 
 const listUsers = async (input, context) => {
     try {
-        let userInfo = context.userInfo;
-        //Check logged in
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        //Check if not admin
-        else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        }
-        //Execute query
-        else {
-            return neo4j.listUsers(input);
-        }
+        isValidOrThrow([new LoginCondition(context.userInfo), new AdminCondition(context.userInfo)]);
+        return neo4j.listUsers(input);
     } catch (err) {
         return err;
     }
@@ -100,13 +71,8 @@ const listUsers = async (input, context) => {
 
 const listArms = async (input, context) => {
     try{
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        else{
-            return await neo4j.listArms(input);
-        }
+        isValidOrThrow([new LoginCondition(context.userInfo)]);
+        return await neo4j.listArms(input);
     }
     catch (err){
         return err
@@ -211,16 +177,11 @@ const registerUser = async (parameters, context) => {
 
 const approveAccess = async (parameters, context) => {
     try {
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING, REJECTED, REVOKED])){
+        isValidOrThrow([new LoginCondition(context.userInfo), new AdminCondition(context.userInfo)]);
+        if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING, REJECTED, REVOKED])){
             return new Error(errorName.INVALID_REVIEW_ARMS);
-        }
-        else {
-            parameters.reviewDate = (new Date()).toString();
+        } else {
+            let userInfo = context.userInfo;
             parameters.reviewerEmail = userInfo.email;
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.approveAccess(parameters)
@@ -242,16 +203,11 @@ const approveAccess = async (parameters, context) => {
 
 const rejectAccess = async (parameters, context) => {
     try {
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING])){
+        isValidOrThrow([new LoginCondition(context.userInfo), new AdminCondition(context.userInfo)]);
+        if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING])){
             return new Error(errorName.INVALID_REVIEW_ARMS);
-        }
-        else {
-            parameters.reviewDate = (new Date()).toString();
+        } else {
+            let userInfo = context.userInfo;
             parameters.reviewerEmail = userInfo.email;
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.rejectAccess(parameters)
@@ -272,16 +228,11 @@ const rejectAccess = async (parameters, context) => {
 
 const revokeAccess = async (parameters, context) => {
     try{
-        let userInfo = context.userInfo;
-        if (!userInfo) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [APPROVED])){
+        isValidOrThrow([new LoginCondition(context.userInfo), new AdminCondition(context.userInfo)]);
+        if (!await validateInputArms(parameters.userID, parameters.armIDs, [APPROVED])){
             return new Error(errorName.INVALID_REVOKE_ARMS);
-        }
-        else {
-            parameters.reviewDate = (new Date()).toString();
+        } else {
+            let userInfo = context.userInfo;
             parameters.reviewerEmail = userInfo.email;
             parameters.reviewerIDP = userInfo.idp;
             let response = await neo4j.revokeAccess(parameters)
@@ -301,31 +252,18 @@ const revokeAccess = async (parameters, context) => {
 const editUser = async (parameters, context) => {
     formatParams(parameters);
     try {
-        let userInfo = context.userInfo;
-        if (!userInfo) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
+        isValidOrThrow([new LoginCondition(context.userInfo), new AdminCondition(context.userInfo), new UserRoleCondition(parameters.role), new UserStatusCondition(parameters.userStatus)]);
+        let response = await neo4j.editUser(parameters)
+        if (response) {
+            let template_params = {
+                firstName: response.firstName,
+                lastName: response.lastName,
+                comment: response.comment
+            }
+            await sendEditNotification(response.email, template_params);
+            return response;
         } else {
-            if (parameters.role && !user_roles.includes(parameters.role)) {
-                return new Error(errorName.INVALID_ROLE);
-            }
-            if (parameters.userStatus !== "" && parameters.userStatus && !user_statuses.includes(parameters.userStatus)) {
-                return new Error(errorName.INVALID_STATUS);
-            }
-            parameters.editDate = (new Date()).toString();
-            let response = await neo4j.editUser(parameters)
-            if (response) {
-                let template_params = {
-                    firstName: response.firstName,
-                    lastName: response.lastName,
-                    comment: response.comment
-                }
-                await sendEditNotification(response.email, template_params);
-                return response;
-            } else {
-                return new Error(errorName.USER_NOT_FOUND);
-            }
+            return new Error(errorName.USER_NOT_FOUND);
         }
     } catch (err) {
         return err;
@@ -354,10 +292,6 @@ function formatParams(params){
     if (params.idp){
         params.idp = params.idp.toLowerCase();
     }
-}
-
-function verifyUserInfo(userInfo) {
-    return userInfo && userInfo.email && userInfo.idp;
 }
 
 module.exports = {

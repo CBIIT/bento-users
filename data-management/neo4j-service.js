@@ -276,7 +276,7 @@ async function approveAccess(parameters) {
         CREATE (access)-[:approved_by]->(reviewer)
         SET access.accessStatus = 'approved'
         SET access.approvedBy = reviewer.userID
-        SET access.reviewDate = $reviewDate
+        SET access.reviewDate = '${getTimeNow()}'
         SET access.comment = $comment
         WITH user, access, arm, reviewer,
         CASE WHEN user.role = "non-member" THEN "member" ELSE user.role END AS newRole,
@@ -311,7 +311,7 @@ async function rejectAccess(parameters) {
         CREATE (access)-[:approved_by]->(reviewer)
         SET access.accessStatus = 'rejected'
         SET access.approvedBy = reviewer.userID
-        SET access.reviewDate = $reviewDate
+        SET access.reviewDate = '${getTimeNow()}'
         SET access.comment = $comment
         WITH COLLECT(DISTINCT {
             armID: arm.armID,
@@ -355,7 +355,7 @@ async function revokeAccess(parameters) {
             WHERE reviewer.userID = adminID
             CREATE (revoked)-[:approved_by]->(reviewer)
             SET revoked.accessStatus = 'revoked'
-            SET revoked.reviewDate = $reviewDate
+            SET revoked.reviewDate = '${getTimeNow()}'
             SET revoked.approvedBy = adminID
             SET revoked.comment = $comment
             SET user.userStatus = newStatus
@@ -398,7 +398,7 @@ async function editUser(parameters) {
         MATCH (user:User)
         WHERE 
             user.userID = $userID
-        SET user.editDate = $editDate
+        SET user.editDate = '${getTimeNow()}'
         `;
     const cypher_return =
         `
