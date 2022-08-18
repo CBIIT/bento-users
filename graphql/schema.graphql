@@ -45,7 +45,8 @@ type UserInfo {
 type Access {
     armID: String
     armName: String
-    "requested, approved, rejected, revoked"
+    armAcronym: String
+    "pending, approved, rejected, revoked"
     accessStatus: String
     requestDate: String
     "Name of the admin who approved/rejected this access"
@@ -70,6 +71,7 @@ input UpdateUserInput {
 type Arm {
     name: String
     id: String
+    acronym: String
 }
 
 type Query {

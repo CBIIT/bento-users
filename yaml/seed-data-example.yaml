@@ -7,5 +7,7 @@ admin:
 arms:
   - armID: "1"
     armName: "Seed Arm 1"
+    armAcronym: "SA1"
   - armID: "2"
     armName: "Seed Arm 2"
+    armAcronym: "SA2"

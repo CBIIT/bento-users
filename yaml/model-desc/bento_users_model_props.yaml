@@ -75,7 +75,7 @@ PropDefinitions:
   accessStatus:
     Desc: The status of the arm access request
     Type:
-      - "requested"
+      - "pending"
       - "approved"
       - "rejected"
       - "revoked"
