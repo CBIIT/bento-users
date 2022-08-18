@@ -14,8 +14,9 @@ async function createArms(arms){
         const cypher =
         `
             CREATE (arm:Arm)
-            SET arm.armID = $armID
-            SET arm.armName = $armName
+            SET arm.id = $armID
+            SET arm.name = $armName
+            SET arm.acronym = $armAcronym
             RETURN arm
         `
         let result = await executeQuery(arm, cypher, 'arm');
@@ -33,7 +34,7 @@ async function getAccesses(userID, accessStatuses){
         WHERE u.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(a:Access)-[:of_user]->(u)
         WHERE a.accessStatus IN $accessStatuses
-        RETURN COLLECT(DISTINCT arm.armID) AS result
+        RETURN COLLECT(DISTINCT arm.id) AS result
     `
     const result = await executeQuery(parameters, cypher, 'result');
     return result[0];
@@ -91,8 +92,9 @@ async function getMyUser(parameters) {
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
         WITH user, COLLECT(DISTINCT request{
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -126,8 +128,9 @@ async function getUser(parameters) {
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
         WITH user, COLLECT(DISTINCT request{
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -164,8 +167,9 @@ async function listUsers(parameters) {
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
         WITH user, COUNT(DISTINCT request) AS numberOfArms, user.lastName + ', ' + user.firstName AS displayName,
         COLLECT(DISTINCT request{
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -196,8 +200,9 @@ async function listArms(parameters) {
     `
         MATCH (arm: Arm)
         RETURN {
-            id: arm.armID,
-            name: arm.armName
+            id: arm.id,
+            name: arm.name,
+            acronym: arm.acronym
         } AS arms
     `
     return await executeQuery(parameters, cypher, 'arms');
@@ -209,7 +214,7 @@ async function requestArmAccess(listParams, userInfo) {
         const cypher =
             `
             MATCH (user:User) WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
-            OPTIONAL MATCH (arm:Arm) WHERE arm.armID=$armID
+            OPTIONAL MATCH (arm:Arm) WHERE arm.id=$armID
             MERGE (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
             SET access.accessStatus= $accessStatus
             SET access.requestDate= '${getTimeNow()}'
@@ -224,13 +229,14 @@ async function requestArmAccess(listParams, userInfo) {
 async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
-        MATCH (user:User)<-[:of_user]-(req:Access)-[:of_arm]->(userArm:Arm)
-        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}' and req.accessStatus in $invalidStatus
-        WITH [x IN COLLECT(DISTINCT userArm)| x.armID] as invalidArmIds
-        
+        MATCH (user:User)
+        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}'
+        MATCH (user)<-[:of_user]-(req:Access)
+        WHERE req.accessStatus in $invalidStatus
+        MATCH (req)-[:of_arm]->(userArm:Arm)
+        WITH COLLECT(DISTINCT userArm.id) as invalidArmIds
         MATCH (arm:Arm)
-        WHERE arm.armID IN $armIDs and not arm.armID in invalidArmIds
-        OPTIONAL MATCH (arm)<-[:of_arm]-(r:Access)
+        WHERE arm.id IN $armIDs and not arm.id in invalidArmIds
         RETURN DISTINCT arm
         `
     const result = await executeQuery(parameters, cypher, 'arm');
@@ -266,7 +272,7 @@ async function approveAccess(parameters) {
         MATCH (user:User)
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
-        WHERE arm.armID IN $armIDs
+        WHERE arm.id IN $armIDs
         WITH arm, access, user
         OPTIONAL MATCH (access)-[r:approved_by]->()
         DELETE r
@@ -284,8 +290,9 @@ async function approveAccess(parameters) {
         SET user.userStatus = newStatus
         SET user.role = newRole
         WITH COLLECT(DISTINCT {
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: access.accessStatus,
             requestDate: access.requestDate,
             reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
@@ -304,7 +311,7 @@ async function rejectAccess(parameters) {
         MATCH (user:User)
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
-        WHERE arm.armID IN $armIDs
+        WHERE arm.id IN $armIDs
         WITH arm, access, user
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
@@ -314,8 +321,9 @@ async function rejectAccess(parameters) {
         SET access.reviewDate = $reviewDate
         SET access.comment = $comment
         WITH COLLECT(DISTINCT {
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: access.accessStatus,
             requestDate: access.requestDate,
             reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
@@ -334,7 +342,7 @@ async function revokeAccess(parameters) {
             MATCH (user:User)
             WHERE user.userID = $userID
             OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(remaining:Access)-[:of_user]->(user)
-            WHERE NOT(arm.armID IN $armIDs) AND remaining.accessStatus = 'approved'
+            WHERE NOT(arm.id IN $armIDs) AND remaining.accessStatus = 'approved'
             WITH CASE 
                 WHEN COUNT(DISTINCT remaining) < 1
                 THEN 'inactive'
@@ -346,7 +354,7 @@ async function revokeAccess(parameters) {
             MATCH (user:User)
             WHERE user.userID = $userID 
             MATCH (arm:Arm)<-[:of_arm]-(revoked:Access)-[:of_user]->(user)
-            WHERE arm.armID IN $armIDs AND revoked.accessStatus = 'approved'
+            WHERE arm.id IN $armIDs AND revoked.accessStatus = 'approved'
             WITH newStatus, adminName, adminID, revoked, user, arm
             OPTIONAL MATCH (revoked)-[r:approved_by]->()
             DELETE r
@@ -360,8 +368,9 @@ async function revokeAccess(parameters) {
             SET revoked.comment = $comment
             SET user.userStatus = newStatus
             RETURN COLLECT(DISTINCT revoked{
-                armID: arm.armID,
-                armName: arm.armName,
+                armID: arm.id,
+                armName: arm.name,
+                armAcronym: arm.acronym,
                 accessStatus: revoked.accessStatus,
                 requestDate: revoked.requestDate,
                 reviewAdminName: adminName,
@@ -407,8 +416,9 @@ async function editUser(parameters) {
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
         WITH user, COLLECT(DISTINCT request{
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -462,8 +472,9 @@ async function updateMyUser(parameters, userInfo) {
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(access)
         WITH user, COLLECT(DISTINCT access{
-            armID: arm.armID,
-            armName: arm.armName,
+            armID: arm.id,
+            armName: arm.name,
+            armAcronym: arm.acronym,
             accessStatus: access.accessStatus,
             requestDate: access.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
