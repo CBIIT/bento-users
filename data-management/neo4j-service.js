@@ -14,9 +14,9 @@ async function createArms(arms){
         const cypher =
         `
             CREATE (arm:Arm)
-            SET arm.id = $armID
-            SET arm.name = $armName
-            SET arm.acronym = $armAcronym
+            SET arm.id = $id
+            SET arm.name = $name
+            SET arm.acronym = $acronym
             RETURN arm
         `
         let result = await executeQuery(arm, cypher, 'arm');
