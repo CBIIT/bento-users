@@ -7,6 +7,7 @@ const driver = neo4j.driver(
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
     {disableLosslessIntegers: true}
 );
+const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
 
 //Queries
 async function createArms(arms){
@@ -213,12 +214,17 @@ async function requestArmAccess(listParams, userInfo) {
     const promises = listParams.map(async (param) => {
         const cypher =
             `
-            MATCH (user:User) WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
+            MATCH (user:User) 
+            WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
+            MATCH (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
+            WHERE arm.id=$armID AND access.accessStatus IN ['${REJECTED}', '${REVOKED}']
+            DETACH DELETE access
+            WITH user
             OPTIONAL MATCH (arm:Arm) WHERE arm.id=$armID
             MERGE (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
             SET access.accessStatus= $accessStatus
             SET access.requestDate= '${getTimeNow()}'
-            RETURN access
+            RETURN access 
             `
         return await executeQuery(param, cypher, 'access');
     });
