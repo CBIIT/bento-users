@@ -2,6 +2,7 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
+const {ADMIN} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -158,24 +159,28 @@ async function getUser(parameters) {
 async function listUsers(parameters) {
     const cypher =
     `
+        MATCH (arm:Arm) 
+        WITH COUNT(DISTINCT arm) AS totalNumOfArms
         MATCH (user:User)
-        WHERE ($role = [] or user.role IN $role) AND ($userStatus = [] or user.userStatus IN $userStatus)
-        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
-        WITH user, request
-        WHERE ($accessStatus = [] or request.accessStatus IN $accessStatus)
-        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
-        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COUNT(DISTINCT request) AS numberOfArms, user.lastName + ', ' + user.firstName AS displayName,
-        COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            armAcronym: arm.acronym,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        WHERE ($role = [] OR user.role IN $role) AND ($userStatus = [] OR user.userStatus IN $userStatus)
+        OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
+        WHERE $accessStatus = [] OR access.accessStatus IN $accessStatus
+        WITH user, access, totalNumOfArms
+        OPTIONAL MATCH (access)-[:of_arm]->(arm:Arm)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
+        WITH user, 
+            user.lastName + ', ' + user.firstName AS displayName, 
+            CASE WHEN user.role = '${ADMIN}' THEN totalNumOfArms ELSE COUNT(DISTINCT arm) END AS numberOfArms,
+            COLLECT(DISTINCT access{
+                armID: arm.id,
+                armName: arm.name,
+                armAcronym: arm.acronym,
+                accessStatus: access.accessStatus,
+                requestDate: access.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: access.reviewDate,
+                comment: access.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
