@@ -216,7 +216,7 @@ async function requestArmAccess(listParams, userInfo) {
             `
             MATCH (user:User) 
             WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
-            MATCH (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
+            OPTIONAL MATCH (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
             WHERE arm.id=$armID AND access.accessStatus IN ['${REJECTED}', '${REVOKED}']
             DETACH DELETE access
             WITH user
