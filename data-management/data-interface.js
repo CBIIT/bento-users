@@ -114,16 +114,37 @@ const listArms = async (input, context) => {
 }
 
 async function requestAccess(parameters, context) {
+    // Validate login and parameters
     isValidOrThrow([new LoginCondition(context.userInfo), new ArmRequestParamsCondition(parameters)]);
+    // Get unique list of arm ids
     const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);
-    // inspect request-arms in the existing arms
     const arms = await searchValidReqArms({armIDs: reqArmIDs}, context);
     isValidOrThrow([new ArmExistCondition(arms, reqArmIDs)]);
-
-    // create request arm access
-    const accessRequest = await addArmRequestAccess(reqArmIDs, context);
-    if (accessRequest) return await updateMyUser(parameters, context);
-    throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+    // Create Arm Access Requests
+    const addArmRequestAccessResponse = await addArmRequestAccess(reqArmIDs, context);
+    if (addArmRequestAccessResponse) {
+        // Update the user's info
+        let updateMyUserResponse  = await updateMyUser(parameters, context);
+        // Send email notifications
+        if (config.emails_enabled) {
+            try{
+                let arms = await neo4j.getArmNamesFromArmIds(reqArmIDs);
+                let messageVariables = {
+                    "$arms": arms.join(", "),
+                    "$user": `${context.userInfo.firstName} ${context.userInfo.lastName}`
+                }
+                await notifyTemplate(context.userInfo, messageVariables, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
+            }
+            catch (err) {
+                console.error("Failed to send notification email: "+err);
+            }
+        }
+        // Return the user's information
+        return updateMyUserResponse;
+    }
+    else{
+        throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+    }
 }
 
 const searchValidReqArms = async (parameters, context) => {
@@ -151,14 +172,15 @@ const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
     isValidOrThrow([new idpCondition(context.userInfo), rejectAdminArmRequest(context.userInfo)]);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
-    // Send email notification after success
-    if (response) await notifyTemplate(context.userInfo, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
-    if (response) return response;
-    throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+    if (response) {
+        return response;
+    }
+    else{
+        throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
+    }
 }
 
 const seedInit = async () => {
-    //Check admins
     let seedData = undefined;
     if ((await neo4j.getAdminEmails()).length < 1){
         try{
@@ -183,7 +205,6 @@ const seedInit = async () => {
            console.error("Seed arms initialization failed: "+err);
        }
     }
-    //Check arms
 }
 
 const registerUser = async (parameters, context) => {
@@ -231,7 +252,11 @@ const approveAccess = async (parameters, context) => {
                     lastName: userData.lastName,
                     comment: parameters.comment,
                 }
-                await sendApprovalNotification(userData.email, template_params);
+                let armIds = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
+                let messageVariables = {
+                    "$arms": armIds.join(", ")
+                }
+                await sendApprovalNotification(userData.email, messageVariables, template_params);
             }
             return response;
         }
@@ -239,7 +264,6 @@ const approveAccess = async (parameters, context) => {
         return err;
     }
 }
-
 
 const rejectAccess = async (parameters, context) => {
     try {
@@ -263,7 +287,11 @@ const rejectAccess = async (parameters, context) => {
                     lastName: userData.lastName,
                     comment: parameters.comment,
                 }
-                await sendRejectionNotification(userData.email, template_params);
+                let armIds = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
+                let messageVariables = {
+                    "$arms": armIds.join(", ")
+                }
+                await sendRejectionNotification(userData.email, messageVariables, template_params);
             }
             return response;
         }
@@ -289,8 +317,6 @@ const revokeAccess = async (parameters, context) => {
             let response = await neo4j.revokeAccess(parameters)
             if (config.emails_enabled && response) {
                 // todo implement email notification
-                // await sendRevokedNotification(response.email, template_params);
-                return response;
             }
             return response;
         }
@@ -298,7 +324,6 @@ const revokeAccess = async (parameters, context) => {
         return err;
     }
 }
-
 
 const editUser = async (parameters, context) => {
     formatParams(parameters);
@@ -337,24 +362,17 @@ const editUser = async (parameters, context) => {
 const updateMyUser = async (parameters, context) => {
     formatParams(parameters);
     isValidOrThrow([new LoginCondition(context.userInfo)]);
-    return await neo4j.updateMyUser({...parameters.userInfo}, {...context.userInfo});
+    let result = await neo4j.updateMyUser(parameters.userInfo, context.userInfo);
+    context.userInfo = {...context.userInfo, ...parameters.userInfo};
+    return result;
 }
 
 function formatParams(params){
-    if (params.email){
-        params.email = params.email.toLowerCase();
-    }
-    if (params.role){
-        params.role = params.role.toLowerCase();
-    }
-    if (params.userStatus){
-        params.userStatus = params.userStatus.toLowerCase();
-    }
-    if (params.accessStatus){
-        params.accessStatus = params.accessStatus.toLowerCase();
-    }
-    if (params.idp){
-        params.idp = params.idp.toLowerCase();
+    let lowerCaseKeys = ["email", "role", "userStatus", "accessStatus", "idp"];
+    for (let key in params) {
+        if (key in lowerCaseKeys){
+            params[key] = params[key].toLowerCase();
+        }
     }
 }
 
@@ -363,20 +381,19 @@ function verifyUserInfo(userInfo) {
 }
 
 module.exports = {
-    getMyUser: getMyUser,
-    getUser: getUser,
-    listUsers: listUsers,
-    registerUser: registerUser,
-    rejectAccess: rejectAccess,
-    editUser: editUser,
-    listArms: listArms,
-    revokeAccess: revokeAccess,
-    approveAccess: approveAccess,
-    updateMyUser: updateMyUser,
+    getMyUser,
+    getUser,
+    listUsers,
+    registerUser,
+    rejectAccess,
+    editUser,
+    listArms,
+    revokeAccess,
+    approveAccess,
+    updateMyUser,
     searchValidReqArms,
     requestAccess,
-    seedInit: seedInit
-    // updateMyUser: updateMyUser,
+    seedInit
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }
