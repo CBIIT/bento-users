@@ -16,7 +16,8 @@ const send = async (fn)=> {
 }
 const adminTemplate = {firstName: "Bento Administrator", lastName: ""};
 
-async function sendReviewNotification(email, template_params, subject, message) {
+async function sendReviewNotification(email, template_params, subject, message, messageVariables) {
+    message = replaceMessageVariables(message, messageVariables);
     let template = (template_params.comment && template_params.comment !== "") ?
         "notification-with-comment-template.html" : "notification-template.html";
     return await send(async () => {
@@ -29,6 +30,13 @@ async function sendReviewNotification(email, template_params, subject, message) 
             email
         );
     });
+}
+
+function replaceMessageVariables(input, messageVariables){
+    for (let key in messageVariables){
+        input = input = input.replace(key, messageVariables[key]);
+    }
+    return input;
 }
 
 module.exports = {
@@ -56,11 +64,11 @@ module.exports = {
             );
         });
     },
-    sendApprovalNotification: async (email, template_params) => {
-        return await sendReviewNotification(email, template_params, email_constants.DAR_APPROVAL_SUBJECT, email_constants.DAR_APPROVAL_CONTENT);
+    sendApprovalNotification: async (email, messageVariables, template_params) => {
+        return await sendReviewNotification(email, template_params, email_constants.DAR_APPROVAL_SUBJECT, email_constants.DAR_APPROVAL_CONTENT, messageVariables);
     },
-    sendRejectionNotification: async (email, template_params) => {
-        return await sendReviewNotification(email, template_params, email_constants.DAR_REJECTION_SUBJECT, email_constants.DAR_REJECTION_CONTENT);
+    sendRejectionNotification: async (email, messageVariables, template_params) => {
+        return await sendReviewNotification(email, template_params, email_constants.DAR_REJECTION_SUBJECT, email_constants.DAR_REJECTION_CONTENT, messageVariables);
     },
     sendEditNotification: async (email, template_params) => {
         let template = (template_params.comment && template_params.comment !== "") ?
@@ -76,25 +84,27 @@ module.exports = {
             );
         });
     },
-    notifyUserArmAccessRequest: async (email, template_params) => {
+    notifyUserArmAccessRequest: async (email, messageVariables, template_params) => {
+        let message = replaceMessageVariables(email_constants.DAR_CONFIRMATION_CONTENT, messageVariables);
         return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
-                email_constants.ARM_REQUEST_ACCESS_SUBJECT,
+                email_constants.DAR_CONFIRMATION_SUBJECT,
                 await createEmailTemplate("notification-template.html", {
-                    message: email_constants.ARM_REQUEST_ACCESS_COMMENT, ...template_params
+                    message: message, ...template_params
                 }),
                 email
             );
         });
     },
-    notifyAdminArmAccessRequest: async (email, _) => {
+    notifyAdminArmAccessRequest: async (email, messageVariables) => {
+        let message = replaceMessageVariables(email_constants.DAR_ADMIN_NOTIFICATION_CONTENT, messageVariables);
         return await send(async () => {
             await sendNotification(
                 email_constants.NOTIFICATION_SENDER,
-                email_constants.ADMIN_ARM_REQUEST_NOTIFICATION_SUBJECT,
+                email_constants.DAR_ADMIN_NOTIFICATION_SUBJECT,
                 await createEmailTemplate("notification-template.html", {
-                    message: email_constants.ADMIN_ARM_REQUEST_ACCESS_COMMENT, ...adminTemplate
+                    message: message, ...adminTemplate
                 }),
                 email
             );

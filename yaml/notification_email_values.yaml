@@ -1,7 +1,13 @@
+# The variable $arms will be replaced by a comma separated list of arm names included in the request
+# The variable $user will be replaced by the submitting user's first name, last name, and email formatted as: firstName lastName (email)
 DAR_APPROVAL_SUBJECT: "Bento Data Access Request Approved"
-DAR_APPROVAL_CONTENT: "Your Data Access Request has been approved. If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
+DAR_APPROVAL_CONTENT: "Your Data Access Request for $arms has been approved. If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
 DAR_REJECTION_SUBJECT: "Bento Data Access Request Rejected"
-DAR_REJECTION_CONTENT: "Your Data Access Request has been rejected. If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
+DAR_REJECTION_CONTENT: "Your Data Access Request for $arms has been rejected. If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
+DAR_CONFIRMATION_SUBJECT: "Bento Data Access Request Confirmation"
+DAR_CONFIRMATION_CONTENT: "Your Data Access Request for $arms has been received and is under review"
+DAR_ADMIN_NOTIFICATION_SUBJECT: "Bento Data Access Request Received"
+DAR_ADMIN_NOTIFICATION_CONTENT: "$user has submitted a Data Access Request for $arms"
 
 NOTIFICATION_SENDER: "do-not-reply@bento-tools.org"
 ADMIN_NOTIFICATION_SUBJECT: "Bento user registration received"
@@ -10,7 +16,3 @@ CONFIRMATION_SUBJECT: "Bento registration confirmation"
 CONFIRMATION_CONTENT: "Thank you for your interest in Bento Software, your registration has been received and is under review"
 EDIT_SUBJECT: "Bento account edited"
 EDIT_CONTENT: "Your Bento account has been edited. If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
-ARM_REQUEST_ACCESS_SUBJECT: "Bento data access request confirmation"
-ARM_REQUEST_ACCESS_COMMENT: "Your data access request has been received and is under review"
-ADMIN_ARM_REQUEST_NOTIFICATION_SUBJECT: "Bento data access request received"
-ADMIN_ARM_REQUEST_ACCESS_COMMENT: "There is a new data access request pending review"

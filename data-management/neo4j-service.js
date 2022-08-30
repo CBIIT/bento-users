@@ -500,6 +500,18 @@ async function updateMyUser(parameters, userInfo) {
     return result[0];
 }
 
+async function getArmNamesFromArmIds(armIds) {
+    const cypher =
+    `
+        MATCH (arm:Arm)
+        WHERE arm.id IN $armIds
+        WITH COLLECT(DISTINCT arm.name) as names
+        RETURN names
+    `;
+    const result = await executeQuery({armIds: armIds}, cypher, 'names');
+    return result[0];
+}
+
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -589,6 +601,7 @@ exports.getAccesses = getAccesses
 exports.requestArmAccess = requestArmAccess
 exports.searchValidRequestArm = searchValidRequestArm
 exports.createArms = createArms
+exports.getArmNamesFromArmIds = getArmNamesFromArmIds
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

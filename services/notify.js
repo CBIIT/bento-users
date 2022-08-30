@@ -45,19 +45,23 @@ function asArray(values = []) {
         : [values];
 }
 
-const notifyTemplate = async (userInfo, sendAdmin, sendUser) => {
+const notifyTemplate = async (userInfo, messageVariables, sendAdmin, sendUser) => {
     // send admin notification
     const notifyAdmin = async () => {
         if (sendAdmin) {
             const adminEmails = await getAdminEmails();
-            if (adminEmails && adminEmails.length > 0) await sendAdmin(adminEmails, {});
-            else console.error("Admin email is not found, please check if administrator user existed");
+            if (adminEmails && adminEmails.length > 0) {
+                await sendAdmin(adminEmails, messageVariables);
+            }
+            else {
+                console.error("No admins found, please verify that at least one administrator user exists");
+            }
         }
     }
 
     const notifyUser = async () => {
         if (sendUser)  {
-            await sendUser(userInfo.email, {
+            await sendUser(userInfo.email, messageVariables, {
                 firstName: userInfo.firstName,
                 lastName: userInfo.lastName
             })
