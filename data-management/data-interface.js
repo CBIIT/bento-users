@@ -228,7 +228,8 @@ const approveAccess = async (parameters, context) => {
                 let userData = await neo4j.getUser({userID: parameters.userID});
                 let template_params = {
                     firstName: userData.firstName,
-                    lastName: userData.lastName
+                    lastName: userData.lastName,
+                    comment: parameters.comment,
                 }
                 await sendApprovalNotification(userData.email, template_params);
             }
@@ -259,7 +260,8 @@ const rejectAccess = async (parameters, context) => {
                 let userData = await neo4j.getUser({userID: parameters.userID});
                 let template_params = {
                     firstName: userData.firstName,
-                    lastName: userData.lastName
+                    lastName: userData.lastName,
+                    comment: parameters.comment,
                 }
                 await sendRejectionNotification(userData.email, template_params);
             }
@@ -319,7 +321,7 @@ const editUser = async (parameters, context) => {
                 let template_params = {
                     firstName: response.firstName,
                     lastName: response.lastName,
-                    comment: response.comment
+                    comment: parameters.comment,
                 }
                 await sendEditNotification(response.email, template_params);
                 return response;
