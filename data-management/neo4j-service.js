@@ -17,7 +17,6 @@ async function createArms(arms){
             CREATE (arm:Arm)
             SET arm.id = $id
             SET arm.name = $name
-            SET arm.acronym = $acronym
             RETURN arm
         `
         let result = await executeQuery(arm, cypher, 'arm');
@@ -95,7 +94,6 @@ async function getMyUser(parameters) {
         WITH user, COLLECT(DISTINCT request{
             armID: arm.id,
             armName: arm.name,
-            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -131,7 +129,6 @@ async function getUser(parameters) {
         WITH user, COLLECT(DISTINCT request{
             armID: arm.id,
             armName: arm.name,
-            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -174,7 +171,6 @@ async function listUsers(parameters) {
             COLLECT(DISTINCT access{
                 armID: arm.id,
                 armName: arm.name,
-                armAcronym: arm.acronym,
                 accessStatus: access.accessStatus,
                 requestDate: access.requestDate,
                 reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -206,8 +202,7 @@ async function listArms(parameters) {
         MATCH (arm: Arm)
         RETURN {
             id: arm.id,
-            name: arm.name,
-            acronym: arm.acronym
+            name: arm.name
         } AS arms
     `
     return await executeQuery(parameters, cypher, 'arms');
@@ -297,7 +292,6 @@ async function approveAccess(parameters) {
         WITH COLLECT(DISTINCT {
             armID: arm.id,
             armName: arm.name,
-            armAcronym: arm.acronym,
             accessStatus: access.accessStatus,
             requestDate: access.requestDate,
             reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
@@ -328,7 +322,6 @@ async function rejectAccess(parameters) {
         WITH COLLECT(DISTINCT {
             armID: arm.id,
             armName: arm.name,
-            armAcronym: arm.acronym,
             accessStatus: access.accessStatus,
             requestDate: access.requestDate,
             reviewAdminName: reviewer.firstName + ' ' + reviewer.lastName,
@@ -375,7 +368,6 @@ async function revokeAccess(parameters) {
             RETURN COLLECT(DISTINCT revoked{
                 armID: arm.id,
                 armName: arm.name,
-                armAcronym: arm.acronym,
                 accessStatus: revoked.accessStatus,
                 requestDate: revoked.requestDate,
                 reviewAdminName: adminName,
@@ -423,7 +415,6 @@ async function editUser(parameters) {
         WITH user, COLLECT(DISTINCT request{
             armID: arm.id,
             armName: arm.name,
-            armAcronym: arm.acronym,
             accessStatus: request.accessStatus,
             requestDate: request.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
@@ -479,7 +470,6 @@ async function updateMyUser(parameters, userInfo) {
         WITH user, COLLECT(DISTINCT access{
             armID: arm.id,
             armName: arm.name,
-            armAcronym: arm.acronym,
             accessStatus: access.accessStatus,
             requestDate: access.requestDate,
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
