@@ -172,21 +172,7 @@ const addArmRequestAccess = async (armIDs, context) => {
     formatParams(context);
     isValidOrThrow([new idpCondition(context.userInfo), rejectAdminArmRequest(context.userInfo)]);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
-    // Send email notification after success
     if (response) {
-        if (config.emails_enabled) {
-            try{
-                let arms = await neo4j.getArmNamesFromArmIds(armIDs);
-                let messageVariables = {
-                    "$arms": arms.join(", "),
-                    "$user": "{context.userInfo.firstName} {context.userInfo.lastName}"
-                }
-                await notifyTemplate(context.userInfo, messageVariables, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
-            }
-            catch (err) {
-                console.error("Failed to send notification email: "+err);
-            }
-        }
         return response;
     }
     else{
