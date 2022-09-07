@@ -155,9 +155,10 @@ const searchValidReqArms = async (parameters, context) => {
 const createReqArmParams = (armIDs) => {
     const listParameters = [];
     const arms = Array.isArray(armIDs) ? armIDs : [armIDs];
+    const requestID = v4();
+    const accessStatus = "pending";
     arms.forEach((armID)=> {
-        const aArm = ArmAccess.createRequestAccess();
-        listParameters.push({armID: armID, accessStatus: aArm.getAccessStatus(), reqID: aArm.getRequestID()});
+        listParameters.push({armID: armID, accessStatus: accessStatus, requestID: requestID});
     });
     return listParameters;
 }
@@ -380,6 +381,23 @@ function verifyUserInfo(userInfo) {
     return userInfo && userInfo.email && userInfo.idp;
 }
 
+const listRequest = async (params, context) => {
+    let userInfo = context.userInfo;
+    //Check logged in
+    if (!verifyUserInfo(userInfo)) {
+        return new Error(errorName.NOT_LOGGED_IN);
+    }
+    //Check if not admin
+    else if (!await checkAdminPermissions(userInfo)) {
+        return new Error(errorName.NOT_AUTHORIZED);
+    }
+    //Execute query
+    else {
+        formatParams(params);
+        return neo4j.listRequest(params);
+    }
+}
+
 module.exports = {
     getMyUser,
     getUser,
@@ -393,7 +411,8 @@ module.exports = {
     updateMyUser,
     searchValidReqArms,
     requestAccess,
-    seedInit
+    seedInit,
+    listRequest
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }
