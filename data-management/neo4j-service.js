@@ -224,6 +224,7 @@ async function requestArmAccess(listParams, userInfo) {
             MERGE (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
             SET access.accessStatus= $accessStatus
             SET access.requestDate= '${getTimeNow()}'
+            SET access.requestID= $requestID
             RETURN access 
             `
         return await executeQuery(param, cypher, 'access');
@@ -512,6 +513,47 @@ async function getArmNamesFromArmIds(armIds) {
     return result[0];
 }
 
+async function listRequest(parameters){
+    const cypher =
+    `
+        MATCH (user:User)<-[:of_user]-(access:Access)-[:of_arm]->(arm:Arm)
+        WHERE 
+            (NOT user.role IN ['${ADMIN}']) AND 
+            (access.accessStatus IN $accessStatus OR $accessStatus = []) AND 
+            (access.requestID IN $requestID OR $requestID = [])
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
+        WITH 
+            user, access, 
+            user.lastName + ', ' + user.firstName AS displayName,
+            access {
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: access.accessStatus,
+                requestDate: access.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: access.reviewDate,
+                comment: access.comment,
+                requestID: access.requestID
+            } AS acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            displayName: displayName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            numberOfArms: COUNT(*),
+            requestID: access.requestID,
+            acl: COLLECT(DISTINCT acl)
+        } as user
+    `;
+    let result = await executeQuery(parameters, cypher, 'user');
+    return result;
+}
+
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -602,6 +644,7 @@ exports.requestArmAccess = requestArmAccess
 exports.searchValidRequestArm = searchValidRequestArm
 exports.createArms = createArms
 exports.getArmNamesFromArmIds = getArmNamesFromArmIds
+exports.listRequest = listRequest
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

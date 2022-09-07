@@ -52,6 +52,7 @@ type Access {
     reviewAdminName: String
     reviewDate: String
     comment: String
+    requestID: ID
 }
 
 input RequestAccessInput {
@@ -72,9 +73,25 @@ type Arm {
     id: String
 }
 
+type UserRequest {
+    firstName: String
+    lastName: String
+    displayName: String
+    organization: String
+    userID: ID
+    email: String
+    IDP: String
+    role: String
+    userStatus: String
+    numberOfArms: Int
+    requestID: ID
+    acl: [Access]
+}
+
 type Query {
     "Admin only"
     listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [UserInfo]
+    listRequest(accessStatus: [String] = ["pending"], requestID: [ID] = []): [UserRequest]
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
