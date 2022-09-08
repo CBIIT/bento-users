@@ -547,6 +547,7 @@ async function listRequest(parameters){
             userStatus: user.userStatus,
             numberOfArms: COUNT(*),
             requestID: access.requestID,
+            requestDate: access.requestDate,
             acl: COLLECT(DISTINCT acl)
         } as user
     `;

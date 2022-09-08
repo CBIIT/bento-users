@@ -85,6 +85,7 @@ type UserRequest {
     userStatus: String
     numberOfArms: Int
     requestID: ID
+    requestDate: String
     acl: [Access]
 }
 
