@@ -1,0 +1,9 @@
+admin:
+  firstName: "Bento"
+  lastName: "Custodian"
+  email: "bentocutodian@gmail.com"
+  idp: "google"
+  organization: ""
+arms:
+  - id: "73c7d182-916f-57cf-bdea-4b5ddf2ee324"
+    name: "GMB"
