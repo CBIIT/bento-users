@@ -1,12 +1,12 @@
 module.exports = Object.freeze({
     // user status
     NONE: '',
-    INACTIVE: 'inactive',
-    ACTIVE: 'active',
-    DISABLED: 'disabled',
-    DELETED: 'deleted',
+    INACTIVE: 'Inactive',
+    ACTIVE: 'Active',
+    DISABLED: 'Disabled',
+    DELETED: 'Deleted',
     // user role
-    ADMIN: 'admin',
-    MEMBER: 'member',
-    NON_MEMBER: 'non-member'
+    ADMIN: 'Admin',
+    MEMBER: 'Member',
+    NON_MEMBER: 'Non-Member'
 });

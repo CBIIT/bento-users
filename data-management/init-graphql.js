@@ -2,6 +2,8 @@ const {buildSchema} = require('graphql');
 const data_interface = require('./data-interface');
 const {graphqlHTTP} = require("express-graphql");
 const {errorType} = require('./graphql-api-constants');
+const {INACTIVE, NON_MEMBER, ACTIVE, DISABLED, DELETED, ADMIN, MEMBER} = require("../constants/user-constant");
+const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
 
 
 //Read schema from schema.graphql file
@@ -27,9 +29,22 @@ const root = {
     // disableUser: data_interface.disableUser,
 };
 
-
+const formatMap = {
+    "pending": PENDING,
+    "approved": APPROVED,
+    "rejected": REJECTED,
+    "revoked": REVOKED,
+    "inactive": INACTIVE,
+    "active": ACTIVE,
+    "disabled": DISABLED,
+    "deleted": DELETED,
+    "admin": ADMIN,
+    "member": MEMBER,
+    "non-member": NON_MEMBER
+}
 
 module.exports = graphqlHTTP((req, res) => {
+    req.body.variables = formatVariables(req.body.variables, ["role", "userStatus", "accessStatus"]);
     return {
         graphiql: true,
         schema: schema,
@@ -52,3 +67,26 @@ module.exports = graphqlHTTP((req, res) => {
         }
     }
 });
+
+function formatVariables(variables, lowerCaseParamsList){
+    for (let key in variables) {
+        if (!lowerCaseParamsList.includes(key)) {
+            continue;
+        }
+        else if (Array.isArray(variables[key]) && variables[key].every(x => typeof x === "string")) {
+            variables[key] = variables[key].map(x => formatSingleVariable(x));
+        }
+        else if (typeof variables[key] === "string") {
+            variables[key] = formatSingleVariable(variables[key]);
+        }
+    }
+    return variables;
+}
+
+function formatSingleVariable(variable) {
+    let key = variable.toLowerCase();
+    if (formatMap[key]){
+        return formatMap[key];
+    }
+    return variable;
+}

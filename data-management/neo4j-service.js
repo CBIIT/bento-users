@@ -2,7 +2,7 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {ADMIN} = require("../constants/user-constant");
+const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -45,7 +45,7 @@ async function getAdminEmails() {
     const cypher =
         `
         MATCH (n:User)
-        WHERE n.role = 'admin' AND n.userStatus = 'active'
+        WHERE n.role = '${ADMIN}' AND n.userStatus = '${ACTIVE}'
         RETURN COLLECT(DISTINCT n.email) AS result
     `
     const result = await executeQuery({}, cypher, 'result');
@@ -65,11 +65,11 @@ async function checkUnique(key) {
 }
 
 async function checkAlreadyApproved(userID) {
-    return checkStatus(userID, 'approved');
+    return checkStatus(userID, APPROVED);
 }
 
 async function checkAlreadyRejected(userID) {
-    return checkStatus(userID, 'rejected');
+    return checkStatus(userID, REJECTED);
 }
 
 async function checkStatus(userID, status) {
@@ -287,13 +287,13 @@ async function approveAccess(parameters) {
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
-        SET access.accessStatus = 'approved'
+        SET access.accessStatus = '${APPROVED}
         SET access.approvedBy = reviewer.userID
         SET access.reviewDate = $reviewDate
         SET access.comment = $comment
         WITH user, access, arm, reviewer,
-        CASE WHEN user.role = "non-member" THEN "member" ELSE user.role END AS newRole,
-        CASE WHEN user.userStatus IN ["", "inactive"] THEN "active" ELSE user.userStatus END AS newStatus
+        CASE WHEN user.role = '${NON_MEMBER}' THEN '${MEMBER}' ELSE user.role END AS newRole,
+        CASE WHEN user.userStatus IN ["", '${INACTIVE}'] THEN '${ACTIVE}' ELSE user.userStatus END AS newStatus
         SET user.userStatus = newStatus
         SET user.role = newRole
         WITH COLLECT(DISTINCT {
@@ -322,7 +322,7 @@ async function rejectAccess(parameters) {
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
-        SET access.accessStatus = 'rejected'
+        SET access.accessStatus = '${REJECTED}'
         SET access.approvedBy = reviewer.userID
         SET access.reviewDate = $reviewDate
         SET access.comment = $comment
@@ -347,10 +347,10 @@ async function revokeAccess(parameters) {
             MATCH (user:User)
             WHERE user.userID = $userID
             OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(remaining:Access)-[:of_user]->(user)
-            WHERE NOT(arm.id IN $armIDs) AND remaining.accessStatus = 'approved'
+            WHERE NOT(arm.id IN $armIDs) AND remaining.accessStatus = '${APPROVED}'
             WITH CASE 
                 WHEN COUNT(DISTINCT remaining) < 1
-                THEN 'inactive'
+                THEN '${INACTIVE}'
                 ELSE user.userStatus
             END AS newStatus 
             MATCH (reviewer:User)
@@ -359,7 +359,7 @@ async function revokeAccess(parameters) {
             MATCH (user:User)
             WHERE user.userID = $userID 
             MATCH (arm:Arm)<-[:of_arm]-(revoked:Access)-[:of_user]->(user)
-            WHERE arm.id IN $armIDs AND revoked.accessStatus = 'approved'
+            WHERE arm.id IN $armIDs AND revoked.accessStatus = '${APPROVED}'
             WITH newStatus, adminName, adminID, revoked, user, arm
             OPTIONAL MATCH (revoked)-[r:approved_by]->()
             DELETE r
