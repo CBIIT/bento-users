@@ -321,8 +321,8 @@ const editUser = async (parameters, context) => {
             if (parameters.role && parameters.role !== aUser.role) {
                 parameters.prevRole = aUser.role;
             }
-            await disableAdmin(aUser, parameters);
-            let response = await neo4j.editUser(parameters)
+            const adminUserParams = disableAdmin(aUser, parameters);
+            let response = await neo4j.editUser({...parameters,...adminUserParams})
             if (response) {
                 let template_params = {
                     firstName: response.firstName,
@@ -340,11 +340,13 @@ const editUser = async (parameters, context) => {
     }
 }
 
-const disableAdmin = async (aUser, params) => {
+const disableAdmin = (user, params) => {
+    const userParams = {};
+    const aUser = JSON.parse(JSON.stringify(user));
     if (aUser.role === ADMIN && params.role !== ADMIN) {
         const prevRole = !aUser.prevRole ? MEMBER : aUser.prevRole;
         if (prevRole === MEMBER) {
-            params.userStatus = ACTIVE;
+            userParams.userStatus = ACTIVE;
         }
         // userStatus is inactive when userStatus is not specified and the user has no approved acl
         const isNoneStatusUser = aUser.userStatus === NONE || !aUser.userStatus;
@@ -352,11 +354,12 @@ const disableAdmin = async (aUser, params) => {
         const armAccessArr = ArmAccess.createArmAccessArray(aUser.acl);
         const approvedACL = getApprovedArmIDs(armAccessArr);
         if (isNoneStatusUser && approvedACL.length === 0) {
-            params.userStatus = INACTIVE;
+            userParams.userStatus = INACTIVE;
         }
         // The user becomes a member after removing admin role
-        params.role = MEMBER;
+        userParams.role = MEMBER;
     }
+    return userParams;
 }
 
 const updateMyUser = async (parameters, context) => {
