@@ -148,6 +148,7 @@ async function getUser(parameters) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
+            prevRole: user.prevRole,
             acl: acl
         } AS user
         `
@@ -443,6 +444,12 @@ async function editUser(parameters) {
         cypher = cypher +
         `
             SET user.role = $role
+        `
+    }
+    if (parameters.prevRole === "" || parameters.prevRole) {
+        cypher = cypher +
+            `
+            SET user.prevRole = $prevRole
         `
     }
     if (parameters.userStatus === "" || parameters.userStatus) {

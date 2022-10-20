@@ -4,7 +4,7 @@ const {errorName, user_roles, user_statuses} = require("./graphql-api-constants"
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
-const {NONE, NON_MEMBER} = require("../constants/user-constant");
+const {NONE, NON_MEMBER, ADMIN, MEMBER, INACTIVE, ACTIVE} = require("../constants/user-constant");
 const {getUniqueArr} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const config = require('../config');
@@ -18,6 +18,7 @@ const idpCondition = require("../model/valid-conditions/idp-condition");
 const {saveUserInfoToSession} = require("../services/session");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
+const {getApprovedArmIDs} = require("../services/arm-access");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -314,6 +315,13 @@ const editUser = async (parameters, context) => {
                 return new Error(errorName.INVALID_STATUS);
             }
             parameters.editDate = (new Date()).toString();
+
+            const aUser = await getUser({userID: parameters.userID}, context);
+            // store previous member status
+            if (parameters.role && parameters.role !== aUser.role) {
+                parameters.prevRole = aUser.role;
+            }
+            await disableAdmin(aUser, parameters);
             let response = await neo4j.editUser(parameters)
             if (response) {
                 let template_params = {
@@ -329,6 +337,25 @@ const editUser = async (parameters, context) => {
         }
     } catch (err) {
         return err;
+    }
+}
+
+const disableAdmin = async (aUser, params) => {
+    if (aUser.role === ADMIN && params.role !== ADMIN) {
+        const prevRole = !aUser.prevRole ? MEMBER : aUser.prevRole;
+        if (prevRole === MEMBER) {
+            params.userStatus = ACTIVE;
+        }
+        // userStatus is inactive when userStatus is not specified and the user has no approved acl
+        const isNoneStatusUser = aUser.userStatus === NONE || !aUser.userStatus;
+        // check approved ACLs
+        const armAccessArr = ArmAccess.createArmAccessArray(aUser.acl);
+        const approvedACL = getApprovedArmIDs(armAccessArr);
+        if (isNoneStatusUser && approvedACL.length === 0) {
+            params.userStatus = INACTIVE;
+        }
+        // The user becomes a member after removing admin role
+        params.role = MEMBER;
     }
 }
 
