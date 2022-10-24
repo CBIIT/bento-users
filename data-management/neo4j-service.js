@@ -448,6 +448,12 @@ async function editUser(parameters) {
             SET user.role = $role
         `
     }
+    if (parameters.prevRole === "" || parameters.prevRole) {
+        cypher = cypher +
+        `
+            SET user.prevRole = $prevRole
+        `
+    }
     if (parameters.userStatus === "" || parameters.userStatus) {
         cypher = cypher +
         `
