@@ -18,6 +18,7 @@ async function createArms(arms){
             CREATE (arm:Arm)
             SET arm.id = $id
             SET arm.name = $name
+            SET arm.acronym = $acronym
             RETURN arm
         `
         let result = await executeQuery(arm, cypher, 'arm');
@@ -287,7 +288,7 @@ async function approveAccess(parameters) {
         MATCH (reviewer:User)
         WHERE reviewer.email = $reviewerEmail AND reviewer.IDP = $reviewerIDP
         CREATE (access)-[:approved_by]->(reviewer)
-        SET access.accessStatus = '${APPROVED}
+        SET access.accessStatus = '${APPROVED}'
         SET access.approvedBy = reviewer.userID
         SET access.reviewDate = $reviewDate
         SET access.comment = $comment
@@ -367,7 +368,7 @@ async function revokeAccess(parameters) {
             MATCH (reviewer:User)
             WHERE reviewer.userID = adminID
             CREATE (revoked)-[:approved_by]->(reviewer)
-            SET revoked.accessStatus = 'revoked'
+            SET revoked.accessStatus = '${REVOKED}'
             SET revoked.reviewDate = $reviewDate
             SET revoked.approvedBy = adminID
             SET revoked.comment = $comment

@@ -32,7 +32,7 @@ async function validateInputArms(userID, accessList, accessStatuses) {
 async function checkAdminPermissions(userInfo) {
     let result = await neo4j.getMyUser(userInfo);
     try{
-        return result.role === 'admin' && result.userStatus === 'active';
+        return result.role === ADMIN && result.userStatus === ACTIVE;
     }
     catch (err){
         return false;

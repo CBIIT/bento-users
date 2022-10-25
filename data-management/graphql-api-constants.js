@@ -1,9 +1,15 @@
 const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
-const {MEMBER, NON_MEMBER, ADMIN} = require("../constants/user-constant");
-exports.valid_idps = valid_idps = ["google", "nih", "login.gov", "test-idp"];
-exports.user_roles = user_roles =['admin', 'member', 'non-member'];
-exports.user_statuses = user_statuses = ['', 'inactive', 'active', 'disabled', 'deleted']; //null also accepted
+const {MEMBER, NON_MEMBER, ADMIN, INACTIVE, ACTIVE, DISABLED, DELETED, NONE} = require("../constants/user-constant");
+const {GOOGLE, NIH, LOGIN_GOV, TEST} = require("../constants/idp-constant")
+exports.user_roles = user_roles =[ADMIN, MEMBER, NON_MEMBER];
+exports.user_statuses = user_statuses = [NONE, INACTIVE, ACTIVE, DISABLED, DELETED]; //null also accepted
 exports.access_statuses = access_statuses = [PENDING, APPROVED, REJECTED, REVOKED];
+const valid_idps = [GOOGLE, NIH, LOGIN_GOV];
+if (process.env.NODE_ENV === 'development'){
+    valid_idps.push(TEST);
+}
+exports.valid_idps = valid_idps
+
 
 exports.errorName = {
     INVALID_REVIEW_ARMS: "INVALID_REVIEW_ARMS",
