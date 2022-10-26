@@ -12,6 +12,7 @@ Following environmental variables are needed
 - NEO4J_URI: Bolt URI of the Neo4j database
 - NEO4J_USER: Neo4j username
 - NEO4J_PASSWORD: Neo4j password
+- NEO4J_DATABASE: Neo4j user-database name
 # Test-data loading configuration
 - DATA_LOADING_MODE : (for testing only) set to "overwrite" to wipe the database before loading
 - DATA_FILE : (for testing only) file containing data to load into the database for testing

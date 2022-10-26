@@ -13,6 +13,7 @@ const config = {
   NEO4J_URI: process.env.NEO4J_URI,
   NEO4J_USER: process.env.NEO4J_USER,
   NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
+  NEO4J_DATABASE: process.env.NEO4J_DATABASE,
   // MySQL Session
   mysql_host: process.env.MYSQL_HOST,
   mysql_port: process.env.MYSQL_PORT,

@@ -15,6 +15,7 @@ async function createArms(arms){
     for (let arm of arms) {
         const cypher =
         `
+            USE fabric.${config.NEO4J_DATABASE}
             CREATE (arm:Arm)
             SET arm.id = $id
             SET arm.name = $name
@@ -32,6 +33,7 @@ async function getAccesses(userID, accessStatuses){
     let parameters = {userID, accessStatuses};
     const cypher =
     `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (u:User)
         WHERE u.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(a:Access)-[:of_user]->(u)
@@ -45,6 +47,7 @@ async function getAccesses(userID, accessStatuses){
 async function getAdminEmails() {
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (n:User)
         WHERE n.role = '${ADMIN}' AND n.userStatus = '${ACTIVE}'
         RETURN COLLECT(DISTINCT n.email) AS result
@@ -57,6 +60,7 @@ async function checkUnique(key) {
     let parameters = {key: key};
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (n:User)
         WITH COLLECT(DISTINCT n.IDP+":"+n.email) AS keys
         RETURN NOT $key in keys as result
@@ -77,6 +81,7 @@ async function checkStatus(userID, status) {
     let parameters = {userID: userID, status: status};
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (n:User)
             WHERE n.userID = $userID
         RETURN n.status = $status as result
@@ -88,6 +93,7 @@ async function checkStatus(userID, status) {
 async function getMyUser(parameters) {
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE user.email = $email AND user.IDP = $idp
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
@@ -123,6 +129,7 @@ async function getMyUser(parameters) {
 async function getUser(parameters) {
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE user.userID = $userID
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
@@ -158,6 +165,7 @@ async function getUser(parameters) {
 async function listUsers(parameters) {
     const cypher =
     `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (arm:Arm) 
         WITH COUNT(DISTINCT arm) AS totalNumOfArms
         MATCH (user:User)
@@ -201,6 +209,7 @@ async function listUsers(parameters) {
 async function listArms(parameters) {
     const cypher =
     `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (arm: Arm)
         RETURN {
             id: arm.id,
@@ -215,6 +224,7 @@ async function requestArmAccess(listParams, userInfo) {
     const promises = listParams.map(async (param) => {
         const cypher =
             `
+            USE fabric.${config.NEO4J_DATABASE}
             MATCH (user:User) 
             WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
             OPTIONAL MATCH (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
@@ -237,6 +247,7 @@ async function requestArmAccess(listParams, userInfo) {
 async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}'
         MATCH (user)<-[:of_user]-(req:Access)
@@ -256,6 +267,7 @@ async function searchValidRequestArm(parameters, user) {
 async function registerUser(parameters) {
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         CREATE (user:User {
             firstName: $firstName,
             lastName: $lastName,
@@ -277,6 +289,7 @@ async function registerUser(parameters) {
 async function approveAccess(parameters) {
     const cypher =
     `  
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
@@ -315,6 +328,7 @@ async function approveAccess(parameters) {
 async function rejectAccess(parameters) {
     const cypher =
         `  
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
@@ -345,6 +359,7 @@ async function rejectAccess(parameters) {
 async function revokeAccess(parameters) {
     const cypher =
         `
+            USE fabric.${config.NEO4J_DATABASE}
             MATCH (user:User)
             WHERE user.userID = $userID
             OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(remaining:Access)-[:of_user]->(user)
@@ -390,6 +405,7 @@ async function revokeAccess(parameters) {
 async function resetApproval(parameters) {
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE 
             user.userID = $userID
@@ -409,6 +425,7 @@ async function resetApproval(parameters) {
 async function editUser(parameters) {
     let cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE 
             user.userID = $userID
@@ -416,6 +433,7 @@ async function editUser(parameters) {
         `;
     const cypher_return =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
@@ -470,6 +488,7 @@ async function updateMyUser(parameters, userInfo) {
     const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(isUndefined(p)));
     const cypher =
         `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)
         WHERE
             user.email = '${userInfo.email}' AND user.IDP = '${userInfo.idp}'
@@ -511,6 +530,7 @@ async function updateMyUser(parameters, userInfo) {
 async function getArmNamesFromArmIds(armIds) {
     const cypher =
     `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (arm:Arm)
         WHERE arm.id IN $armIds
         WITH COLLECT(DISTINCT arm.name) as names
@@ -523,6 +543,7 @@ async function getArmNamesFromArmIds(armIds) {
 async function listRequest(parameters){
     const cypher =
     `
+        USE fabric.${config.NEO4J_DATABASE}
         MATCH (user:User)<-[:of_user]-(access:Access)-[:of_arm]->(arm:Arm)
         WHERE 
             (NOT user.role IN ['${ADMIN}']) AND 
