@@ -5,7 +5,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
 const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../constants/user-constant");
-const {getUniqueArr} = require("../util/string-util");
+const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
@@ -32,7 +32,7 @@ async function validateInputArms(userID, accessList, accessStatuses) {
 async function checkAdminPermissions(userInfo) {
     let result = await neo4j.getMyUser(userInfo);
     try{
-        return result.role === 'admin' && result.userStatus === 'active';
+        return isCaseInsensitiveEqual(result.role, ADMIN) && isCaseInsensitiveEqual(result.userStatus, ACTIVE);
     }
     catch (err){
         return false;
@@ -157,7 +157,7 @@ const createReqArmParams = (armIDs) => {
     const listParameters = [];
     const arms = Array.isArray(armIDs) ? armIDs : [armIDs];
     const requestID = v4();
-    const accessStatus = "pending";
+    const accessStatus = PENDING;
     arms.forEach((armID)=> {
         listParameters.push({armID: armID, accessStatus: accessStatus, requestID: requestID});
     });
@@ -171,7 +171,6 @@ const rejectAdminArmRequest = (userInfo)=> {
 }
 
 const addArmRequestAccess = async (armIDs, context) => {
-    formatParams(context);
     isValidOrThrow([new idpCondition(context.userInfo), rejectAdminArmRequest(context.userInfo)]);
     const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
     if (response) {
@@ -187,8 +186,7 @@ const seedInit = async () => {
     if ((await neo4j.getAdminEmails()).length < 1){
         try{
             seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
-            let admin = {...seedData.admin, ...{userID: v4(), role: 'admin', status: 'active'}};
-            formatParams(admin);
+            let admin = {...seedData.admin, ...{userID: v4(), role: ADMIN, status: ACTIVE}};
             await neo4j.registerUser(admin);
             console.log("Seed admin initialized in database");
         } catch (err){
@@ -210,7 +208,6 @@ const seedInit = async () => {
 }
 
 const registerUser = async (parameters, context) => {
-    formatParams(parameters.userInfo);
     isValidOrThrow([new idpCondition(parameters.userInfo)]);
     if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
 
@@ -330,9 +327,9 @@ const revokeAccess = async (parameters, context) => {
 const disableAdmin = (user, params) => {
     const userParams = {};
     const aUser = JSON.parse(JSON.stringify(user));
-    if (aUser.role === ADMIN && params.role !== ADMIN) {
+    if (isCaseInsensitiveEqual(aUser.role, ADMIN) && params.role !== ADMIN) {
         const prevRole = !aUser.prevRole ? MEMBER : aUser.prevRole;
-        if (prevRole === MEMBER) {
+        if (isCaseInsensitiveEqual(prevRole, MEMBER)) {
             userParams.userStatus = ACTIVE;
         }
         // userStatus is inactive when userStatus is not specified and the user has no approved acl
@@ -350,7 +347,6 @@ const disableAdmin = (user, params) => {
 }
 
 const editUser = async (parameters, context) => {
-    formatParams(parameters);
     try {
         let userInfo = context.userInfo;
         if (!userInfo) {
@@ -358,17 +354,17 @@ const editUser = async (parameters, context) => {
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         } else {
-            if (parameters.role && !user_roles.includes(parameters.role)) {
+            if (parameters.role && !isElementInArrayCaseInsensitive(user_roles, parameters.role)) {
                 return new Error(errorName.INVALID_ROLE);
             }
-            if (parameters.userStatus !== "" && parameters.userStatus && !user_statuses.includes(parameters.userStatus)) {
+            if (parameters.userStatus !== "" && parameters.userStatus && !isElementInArrayCaseInsensitive(user_statuses, parameters.userStatus)) {
                 return new Error(errorName.INVALID_STATUS);
             }
             parameters.editDate = (new Date()).toString();
 
             const aUser = await getUser({userID: parameters.userID}, context);
             // store previous member status
-            if (parameters.role && parameters.role !== aUser.role) {
+            if (parameters.role && !isCaseInsensitiveEqual(parameters.role, aUser.role)) {
                 parameters.prevRole = aUser.role;
             }
             const adminUserParams = disableAdmin(aUser, parameters);
@@ -391,20 +387,10 @@ const editUser = async (parameters, context) => {
 }
 
 const updateMyUser = async (parameters, context) => {
-    formatParams(parameters);
     isValidOrThrow([new LoginCondition(context.userInfo)]);
     let result = await neo4j.updateMyUser(parameters.userInfo, context.userInfo);
     context.userInfo = {...context.userInfo, ...parameters.userInfo};
     return result;
-}
-
-function formatParams(params){
-    let lowerCaseKeys = ["email", "role", "userStatus", "accessStatus", "idp"];
-    for (let key in params) {
-        if (key in lowerCaseKeys){
-            params[key] = params[key].toLowerCase();
-        }
-    }
 }
 
 function verifyUserInfo(userInfo) {
@@ -423,7 +409,6 @@ const listRequest = async (params, context) => {
     }
     //Execute query
     else {
-        formatParams(params);
         return neo4j.listRequest(params);
     }
 }

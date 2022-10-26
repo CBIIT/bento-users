@@ -1,4 +1,4 @@
-const {isCaseInsensitiveEqual, isElementInArray} = require('../util/string-util')
+const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive} = require('../util/string-util')
 
 describe('Util Test', () => {
     test('/string case insensitive equal', () => {
@@ -27,6 +27,28 @@ describe('Util Test', () => {
 
         for (let t of test) {
             const result = isElementInArray(t.arr, t.target);
+            expect(result).toBe(t.result);
+        }
+    });
+
+    test('/inspect any case-insensitive element in array', () => {
+        const test = [
+            {arr: [], target: 'idp',result: false},
+            {arr: ['NiH'], target: 'NIH',result: true},
+            {arr: null, target: 'Nih',result: false},
+            {arr: null, target: undefined,result: false},
+            {arr: ['nIH'], target: 'Nih',result: true},
+            {arr: ['nih'], target: 'NIH',result: true},
+            {arr: ['google', 'nih'], target: 'nIh',result: true},
+            {arr: ['google', 'nih'], target: 'NIH',result: true},
+            {arr: ['google', 'nih', null], target: null,result: false},
+            {arr: ['google', 'nih', null], target: 'GOOGLE',result: true},
+            {arr: ['google', 'nih', undefined], target: undefined,result: false},
+            {arr: ['google', 'nih', null], target: 'GOOGLE',result: true}
+        ];
+
+        for (let t of test) {
+            const result = isElementInArrayCaseInsensitive(t.arr, t.target);
             expect(result).toBe(t.result);
         }
     });
