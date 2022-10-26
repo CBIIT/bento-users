@@ -5,7 +5,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
 const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../constants/user-constant");
-const {getUniqueArr} = require("../util/string-util");
+const {getUniqueArr, isCaseInsensitiveEqual} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
@@ -32,7 +32,7 @@ async function validateInputArms(userID, accessList, accessStatuses) {
 async function checkAdminPermissions(userInfo) {
     let result = await neo4j.getMyUser(userInfo);
     try{
-        return result.role === ADMIN && result.userStatus === ACTIVE;
+        return isCaseInsensitiveEqual(result.role, ADMIN) && isCaseInsensitiveEqual(result.userStatus, ACTIVE);
     }
     catch (err){
         return false;
