@@ -5,7 +5,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
 const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../constants/user-constant");
-const {getUniqueArr, isCaseInsensitiveEqual} = require("../util/string-util");
+const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive} = require("../util/string-util");
 const UserBuilder = require("../model/user");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
@@ -327,9 +327,9 @@ const revokeAccess = async (parameters, context) => {
 const disableAdmin = (user, params) => {
     const userParams = {};
     const aUser = JSON.parse(JSON.stringify(user));
-    if (aUser.role === ADMIN && params.role !== ADMIN) {
+    if (isCaseInsensitiveEqual(aUser.role, ADMIN) && params.role !== ADMIN) {
         const prevRole = !aUser.prevRole ? MEMBER : aUser.prevRole;
-        if (prevRole === MEMBER) {
+        if (isCaseInsensitiveEqual(prevRole, MEMBER)) {
             userParams.userStatus = ACTIVE;
         }
         // userStatus is inactive when userStatus is not specified and the user has no approved acl
@@ -354,17 +354,17 @@ const editUser = async (parameters, context) => {
         } else if (!await checkAdminPermissions(userInfo)) {
             return new Error(errorName.NOT_AUTHORIZED);
         } else {
-            if (parameters.role && !user_roles.includes(parameters.role)) {
+            if (parameters.role && !isElementInArrayCaseInsensitive(user_roles, parameters.role)) {
                 return new Error(errorName.INVALID_ROLE);
             }
-            if (parameters.userStatus !== "" && parameters.userStatus && !user_statuses.includes(parameters.userStatus)) {
+            if (parameters.userStatus !== "" && parameters.userStatus && !isElementInArrayCaseInsensitive(user_statuses, parameters.userStatus)) {
                 return new Error(errorName.INVALID_STATUS);
             }
             parameters.editDate = (new Date()).toString();
 
             const aUser = await getUser({userID: parameters.userID}, context);
             // store previous member status
-            if (parameters.role && parameters.role !== aUser.role) {
+            if (parameters.role && !isCaseInsensitiveEqual(parameters.role, aUser.role)) {
                 parameters.prevRole = aUser.role;
             }
             const adminUserParams = disableAdmin(aUser, parameters);
