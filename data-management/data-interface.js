@@ -181,8 +181,21 @@ const addArmRequestAccess = async (armIDs, context) => {
     }
 }
 
+const isDatabaseExists = async (databaseName) => {
+    const dbList = await neo4j.listDatabase(databaseName);
+    return (dbList && dbList.includes(databaseName));
+}
+
+const createDatabase = async (name) => {
+    const params = {name}
+    return await neo4j.createDatabase(params);
+}
+
 const seedInit = async () => {
     let seedData = undefined;
+    // create user DB if not exits
+    if (!await isDatabaseExists(config.NEO4J_DATABASE)) await createDatabase(config.NEO4J_DATABASE);
+
     if ((await neo4j.getAdminEmails()).length < 1){
         try{
             seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
@@ -427,7 +440,9 @@ module.exports = {
     searchValidReqArms,
     requestAccess,
     seedInit,
-    listRequest
+    listRequest,
+    isDatabaseExists,
+    createDatabase
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }
