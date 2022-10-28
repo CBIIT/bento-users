@@ -328,7 +328,7 @@ const disableAdmin = async (userID, params, context) => {
     const aUser = await getUser({userID: userID}, context);
     const userParams = {};
     const isAdminUser = isCaseInsensitiveEqual(aUser.role, ADMIN);
-    const isAdminRevoke = !isCaseInsensitiveEqual(params.role, ADMIN);
+    const isAdminRevoke = isElementInArrayCaseInsensitive(user_roles, params.role) && !isCaseInsensitiveEqual(params.role, ADMIN);
     if (isAdminUser && isAdminRevoke) {
         // check approved ACLs
         const armArray = ArmAccess.createArmAccessArray(aUser.acl);
