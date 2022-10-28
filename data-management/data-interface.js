@@ -324,22 +324,15 @@ const revokeAccess = async (parameters, context) => {
     }
 }
 
-const disableAdmin = (user, params) => {
+const disableAdmin = async (userID, params, context) => {
+    const aUser = await getUser({userID: userID}, context);
     const userParams = {};
-    const aUser = JSON.parse(JSON.stringify(user));
-    if (isCaseInsensitiveEqual(aUser.role, ADMIN) && params.role !== ADMIN) {
-        const prevRole = !aUser.prevRole ? MEMBER : aUser.prevRole;
-        if (isCaseInsensitiveEqual(prevRole, MEMBER)) {
-            userParams.userStatus = ACTIVE;
-        }
-        // userStatus is inactive when userStatus is not specified and the user has no approved acl
-        const isNoneStatusUser = aUser.userStatus === NONE || !aUser.userStatus;
+    const isAdminUser = isCaseInsensitiveEqual(aUser.role, ADMIN);
+    const isAdminRevoke = !isCaseInsensitiveEqual(params.role, ADMIN);
+    if (isAdminUser && isAdminRevoke) {
         // check approved ACLs
-        const armAccessArr = ArmAccess.createArmAccessArray(aUser.acl);
-        const approvedACL = getApprovedArmIDs(armAccessArr);
-        if (isNoneStatusUser && approvedACL.length === 0) {
-            userParams.userStatus = INACTIVE;
-        }
+        const armArray = ArmAccess.createArmAccessArray(aUser.acl);
+        userParams.userStatus = getApprovedArmIDs(armArray).length > 0 ? ACTIVE : INACTIVE;
         // The user becomes a member after removing admin role
         userParams.role = MEMBER;
     }
@@ -362,13 +355,8 @@ const editUser = async (parameters, context) => {
             }
             parameters.editDate = (new Date()).toString();
 
-            const aUser = await getUser({userID: parameters.userID}, context);
-            // store previous member status
-            if (parameters.role && !isCaseInsensitiveEqual(parameters.role, aUser.role)) {
-                parameters.prevRole = aUser.role;
-            }
-            const adminUserParams = disableAdmin(aUser, parameters);
-            let response = await neo4j.editUser({...parameters,...adminUserParams})
+            const adminUserParams = await disableAdmin(parameters.userID, parameters, context);
+            let response = await neo4j.editUser({...parameters,...adminUserParams});
             if (response) {
                 let template_params = {
                     firstName: response.firstName,
