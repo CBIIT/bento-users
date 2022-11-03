@@ -92,7 +92,7 @@ type UserRequest {
 type Query {
     "Admin only"
     listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [UserInfo]
-    listRequest(accessStatus: [String] = ["pending"], requestID: [ID] = []): [UserRequest]
+    listRequest(accessStatus: [String] = ["Pending"], requestID: [ID] = []): [UserRequest]
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
