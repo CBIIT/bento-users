@@ -1,14 +1,9 @@
-const neo4j = require('neo4j-driver');
-const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
 const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE} = require("../constants/user-constant");
-const driver = neo4j.driver(
-    config.NEO4J_URI,
-    neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
-    {disableLosslessIntegers: true}
-);
 const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
+const {BentoUserDriver} = require("../connector/bento-user-driver");
+const {BentoAuthDriver} = require("../connector/bento-auth-driver");
 
 //Queries
 async function createArms(arms){
@@ -556,6 +551,12 @@ async function listRequest(parameters){
     return result;
 }
 
+// TODO
+async function getLoginEvent(parameters, cypher, returnLabel) {
+    const driver = new BentoAuthDriver();
+    return await driver.executeQuery(parameters, cypher, returnLabel);
+}
+
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -606,22 +607,8 @@ async function wipeDatabase() {
 }
 
 async function executeQuery(parameters, cypher, returnLabel) {
-    const session = driver.session();
-    const tx = session.beginTransaction();
-    try {
-        const result = await tx.run(cypher, parameters);
-        return result.records.map(record => {
-            return record.get(returnLabel)
-        })
-    } catch (error) {
-        throw error;
-    } finally {
-        try {
-            await tx.commit();
-        } catch (err) {
-        }
-        await session.close();
-    }
+    const bentoAuth = new BentoUserDriver();
+    return await bentoAuth.executeQuery(parameters, cypher, returnLabel);
 }
 
 //Exported functions
