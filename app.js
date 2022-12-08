@@ -7,7 +7,8 @@ const logger = require('morgan');
 const fs = require('fs');
 const cors = require('cors');
 const config = require('./config');
-const {createSession} = require("./services/session");
+const cronJob = require("node-cron");
+const {disableInactiveUsers} = require("./data-management/data-interface");
 
 //Print configuration
 console.log(config);
@@ -68,6 +69,13 @@ app.get('/api/users/version', function (req, res, next) {
     res.json({
         version: config.version, date: config.date
     });
+});
+
+// TODO we need to schedule running a cronjob everyday. ex) 05:00:01, 05:30:01
+cronJob.schedule("1 */30 5 * * *", async () => {
+    console.log("Running a scheduled background task to disable inactive users twice a day");
+    const disabledUsers = await disableInactiveUsers();
+    // TODO disable email notification
 });
 
 // catch 404 and forward to error handler
