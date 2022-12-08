@@ -401,6 +401,10 @@ const listRequest = async (params, context) => {
     }
 }
 
+const disableInactiveUsers = async () => {
+    return await neo4j.disableInactiveUsers();
+}
+
 module.exports = {
     getMyUser,
     getUser,
@@ -415,7 +419,8 @@ module.exports = {
     searchValidReqArms,
     requestAccess,
     seedInit,
-    listRequest
+    listRequest,
+    disableInactiveUsers
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }
