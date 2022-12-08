@@ -2,7 +2,7 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE} = require("../constants/user-constant");
+const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -117,6 +117,37 @@ async function getMyUser(parameters) {
         } AS user
         `
     const result = await executeQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
+async function disableInactiveUsers() {
+    const cypher =
+        `  
+        // Search inactive users in 60 days
+        MATCH (event:Event) 
+        WHERE 
+            toString(duration.inMonths(datetime({epochmillis: toInteger(event.timestamp)}), datetime())) = 'P-2M'
+        WITH event
+        // Disable Inactive User
+        MATCH (u:User)
+        WHERE 
+            u.IDP=~ '(?i)' + event.user_idp and u.email=event.user_email and NOT u.userStatus = '${DISABLED}'
+            SET u.userStatus='${DISABLED}'
+        // Change Admin Role to Member
+        WITH u
+        MATCH (u)
+        // Set Disabled User
+        WHERE u.role = '${ADMIN}'
+        SET u.role='${MEMBER}'
+        RETURN
+        COLLECT (DISTINCT {
+            firstName: u.firstName,
+            lastName: u.lastName,
+            userEmail: u.email,
+            IDP: u.IDP
+        }) as user
+        `
+    const result = await executeQuery({}, cypher, 'user');
     return result[0];
 }
 
@@ -647,6 +678,7 @@ exports.searchValidRequestArm = searchValidRequestArm
 exports.createArms = createArms
 exports.getArmNamesFromArmIds = getArmNamesFromArmIds
 exports.listRequest = listRequest
+exports.disableInactiveUsers = disableInactiveUsers
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
