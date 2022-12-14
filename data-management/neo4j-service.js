@@ -556,31 +556,55 @@ async function listRequest(parameters){
     return result;
 }
 
-async function disableInactiveUsers() {
+async function disableAdminRole(params, newRole) {
     const cypher =
         `  
-        // Search inactive users in 60 days
-        MATCH (event:Event) 
-        WHERE 
-            toString(duration.inMonths(datetime({epochmillis: toInteger(event.timestamp)}), datetime())) = 'P-2M'
-        WITH event
-        // Disable Inactive User
+        MATCH (u: User)
+        WHERE u.role='${ADMIN}' and u.userID in $ids
+        SET u.role='${newRole}'
+        RETURN COLLECT(DISTINCT {
+            userEmail: u.email,
+            IDP: u.IDP,
+            role: u.role
+        }) as user
+        `
+    const result = await executeQuery(params, cypher, 'user');
+    return result[0];
+}
+
+async function disableUsers(params) {
+    const cypher =
+        `
+        MATCH (u: User)
+        WHERE u.userID IN $ids
+        SET u.userStatus='${DISABLED}'
+        RETURN COLLECT(DISTINCT {
+            userEmail: u.email,
+            IDP: u.IDP,
+            userStatus: u.userStatus
+        }) as user
+        `
+    const result = await executeQuery(params, cypher, 'user');
+    return result[0];
+}
+
+async function getInactiveUsers() {
+    const cypher =
+        `  
+        MATCH (e:Event)
+        WHERE e.event_type='Login'
+        WITH DISTINCT ({email: e.user_email,idp:e.user_idp, timeStamp: max(toInteger(e.timestamp))}) as eventUsers
+        // Disable inactive users after the determined period     
         MATCH (u:User)
         WHERE 
-            u.IDP=~ '(?i)' + event.user_idp and u.email=event.user_email and NOT u.userStatus = '${DISABLED}'
-            SET u.userStatus='${DISABLED}'
-        // Change Admin Role to Member
-        WITH u
-        MATCH (u)
-        // Set Disabled User
-        WHERE u.role = '${ADMIN}'
-        SET u.role='${MEMBER}'
-        RETURN
-        COLLECT (DISTINCT {
+            u.IDP=~ '(?i)' + eventUsers.idp AND u.email = eventUsers.email  and toInteger(timestamp()) > (toInteger(eventUsers.timeStamp) + 86400 * '${config.inactive_user_days}') and NOT u.userStatus = '${DISABLED}'
+        RETURN COLLECT(DISTINCT {
+            userID: u.userID,
             firstName: u.firstName,
             lastName: u.lastName,
             userEmail: u.email,
-            IDP: u.IDP
+            IDP: u.IDP,
+            role: u.role
         }) as user
         `
     const result = await executeQuery({}, cypher, 'user');
@@ -677,7 +701,9 @@ exports.searchValidRequestArm = searchValidRequestArm
 exports.createArms = createArms
 exports.getArmNamesFromArmIds = getArmNamesFromArmIds
 exports.listRequest = listRequest
-exports.disableInactiveUsers = disableInactiveUsers
+exports.getInactiveUsers = getInactiveUsers
+exports.disableUsers = disableUsers
+exports.disableAdminRole = disableAdminRole
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

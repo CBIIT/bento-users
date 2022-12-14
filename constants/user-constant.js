@@ -5,6 +5,7 @@ module.exports = Object.freeze({
     ACTIVE: 'Active',
     DISABLED: 'Disabled',
     DELETED: 'Deleted',
+    DISABLED: 'Disabled',
     // user role
     ADMIN: 'Admin',
     MEMBER: 'Member',
