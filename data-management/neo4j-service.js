@@ -597,7 +597,7 @@ async function getInactiveUsers() {
         // Disable inactive users after the determined period     
         MATCH (u:User)
         WHERE 
-            u.IDP=~ '(?i)' + eventUsers.idp AND u.email = eventUsers.email  and toInteger(timestamp()) > (toInteger(eventUsers.timeStamp) + 86400 * '${config.inactive_user_days}') and NOT u.userStatus = '${DISABLED}'
+            u.IDP=~ '(?i)' + eventUsers.idp AND u.email = eventUsers.email  and toInteger(timestamp()) > (toInteger(eventUsers.timeStamp) + 86400 * ${config.inactive_user_days}) and NOT u.userStatus = '${DISABLED}'
         RETURN COLLECT(DISTINCT {
             userID: u.userID,
             firstName: u.firstName,
