@@ -1,0 +1,3 @@
+[submodule "bento-event-logging"]
+	path = bento-event-logging
+	url = https://github.com/CBIIT/bento-event-logging.git
