@@ -591,19 +591,20 @@ async function disableUsers(params) {
 async function getInactiveUsers() {
     const cypher =
         `
-        MATCH (u:User)
-        WHERE
-            NOT u.userStatus = '${DISABLED}'
-            WITH COLLECT(DISTINCT u.userID) AS users
         MATCH (e:Event)
         WHERE
             e.event_type = '${LOGIN}' AND
-            // 86400*1000 millisecond = 1 day
-            e.user_id IN users AND toInteger(e.timestamp) + (86400*1000 * ${config.inactive_user_days}) > toInteger(timestamp())
-        WITH COLLECT(DISTINCT e.user_id) AS activeUsers, users
+            // 86400 * 1000 millisecond = 1 day
+            toInteger(e.timestamp) + (86400 * 1000 * ${config.inactive_user_days}) > toInteger(timestamp())
+        WITH COLLECT(DISTINCT e.user_id) AS activeUsers
         MATCH (u:User)
         WHERE
-            u.userID IN users AND NOT u.userID IN activeUsers
+            NOT u.userStatus = '${DISABLED}'
+        WITH COLLECT(DISTINCT u.userID) AS enabledUsers, activeUsers
+        MATCH (u:User)
+        WHERE
+            u.userID IN enabledUsers AND
+            NOT u.userID IN activeUsers
         RETURN COLLECT(DISTINCT {
             userID: u.userID,
             firstName: u.firstName,
