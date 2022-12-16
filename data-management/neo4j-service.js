@@ -2,7 +2,7 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../constants/user-constant");
+const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED, LOGIN} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
@@ -590,21 +590,28 @@ async function disableUsers(params) {
 
 async function getInactiveUsers() {
     const cypher =
-        `  
-        MATCH (e:Event)
-        WHERE e.event_type='Login'
-        WITH DISTINCT ({email: e.user_email,idp:e.user_idp, timeStamp: max(toInteger(e.timestamp))}) as eventUsers
-        // Disable inactive users after the determined period     
+        `
         MATCH (u:User)
-        WHERE 
-            u.IDP=~ '(?i)' + eventUsers.idp AND u.email = eventUsers.email  and toInteger(timestamp()) > (toInteger(eventUsers.timeStamp) + 86400 * ${config.inactive_user_days}) and NOT u.userStatus = '${DISABLED}'
+        WHERE
+            NOT u.userStatus = '${DISABLED}'
+            WITH COLLECT(DISTINCT u.userID) AS users
+        MATCH (e:Event)
+        WHERE
+            e.event_type = '${LOGIN}' AND
+            // 86400*1000 millisecond = 1 day
+            e.user_id IN users AND toInteger(e.timestamp) + (86400*1000 * ${config.inactive_user_days}) > toInteger(timestamp())
+        WITH COLLECT(DISTINCT e.user_id) AS activeUsers, users
+        MATCH (u:User)
+        WHERE
+            u.userID IN users AND NOT u.userID IN activeUsers
         RETURN COLLECT(DISTINCT {
             userID: u.userID,
             firstName: u.firstName,
             lastName: u.lastName,
             userEmail: u.email,
             IDP: u.IDP,
-            role: u.role
+            role: u.role,
+            organization: u.organization
         }) as user
         `
     const result = await executeQuery({}, cypher, 'user');

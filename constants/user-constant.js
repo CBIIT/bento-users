@@ -9,5 +9,7 @@ module.exports = Object.freeze({
     // user role
     ADMIN: 'Admin',
     MEMBER: 'Member',
-    NON_MEMBER: 'Non-Member'
+    NON_MEMBER: 'Non-Member',
+    // Login Event
+    LOGIN: 'Login'
 });

@@ -10,6 +10,7 @@ const config = require('./config');
 const {createSession} = require("./services/session");
 const cronJob = require("node-cron");
 const {disableInactiveUsers} = require("./data-management/data-interface");
+const {getTimeNow} = require("./util/time-util");
 
 //Print configuration
 console.log(config);
@@ -72,11 +73,10 @@ app.get('/api/users/version', function (req, res, next) {
     });
 });
 
-// TODO we need to schedule running a cronjob everyday. ex) 05:00:01, 05:30:01
-cronJob.schedule("1 */30 5 * * *", async () => {
-    console.log("Running a scheduled background task to disable inactive users twice a day");
-    const disabledUsers = await disableInactiveUsers();
-    // TODO disable email notification
+// Scheduled cronjob twice a day(5am, 8pm)
+cronJob.schedule("1 0 5/20 * * *", async () => {
+    console.log("Running a scheduled background task to disable inactive users at " + getTimeNow());
+    await disableInactiveUsers();
 });
 
 // catch 404 and forward to error handler
