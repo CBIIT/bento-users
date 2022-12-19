@@ -401,6 +401,35 @@ const listRequest = async (params, context) => {
     }
 }
 
+const disableInactiveUsers = async () => {
+    const users = await neo4j.getInactiveUsers();
+    if (users) {
+        let disableAdminIDs = [];
+        let disableUserIDs = [];
+        users.forEach((user)=> {
+            if (isCaseInsensitiveEqual(user.role, ADMIN)) {
+                disableAdminIDs.push(user.userID);
+            }
+            disableUserIDs.push(user.userID);
+        });
+        // Disable inactive users
+        if (disableUserIDs.length > 0) {
+            const disabledUsers = await neo4j.disableUsers({ids: disableUserIDs});
+            if (!disabledUsers && disabledUsers.length == 0)
+                console.error("Disabling users failed");
+        }
+
+        // Disable admin ids
+        if (disableAdminIDs.length > 0) {
+            const disabledAdmins = await neo4j.disableAdminRole({ids: disableAdminIDs}, MEMBER);
+            if (!disabledAdmins && disabledAdmins.length == 0)
+                console.error("Changing the admin role failed");
+        }
+    }
+    // TODO email notification
+    return users;
+}
+
 module.exports = {
     getMyUser,
     getUser,
@@ -415,7 +444,8 @@ module.exports = {
     searchValidReqArms,
     requestAccess,
     seedInit,
-    listRequest
+    listRequest,
+    disableInactiveUsers
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }

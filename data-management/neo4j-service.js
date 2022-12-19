@@ -2,13 +2,14 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE} = require("../constants/user-constant");
+const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
     {disableLosslessIntegers: true}
 );
 const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
+const {LOGIN} = require("../bento-event-logging/const/event-types");
 
 //Queries
 async function createArms(arms){
@@ -556,6 +557,68 @@ async function listRequest(parameters){
     return result;
 }
 
+async function disableAdminRole(params, newRole) {
+    const cypher =
+        `  
+        MATCH (u: User)
+        WHERE u.role='${ADMIN}' and u.userID in $ids
+        SET u.role='${newRole}'
+        RETURN COLLECT(DISTINCT {
+            userEmail: u.email,
+            IDP: u.IDP,
+            role: u.role
+        }) as user
+        `
+    const result = await executeQuery(params, cypher, 'user');
+    return result[0];
+}
+
+async function disableUsers(params) {
+    const cypher =
+        `
+        MATCH (u: User)
+        WHERE u.userID IN $ids
+        SET u.userStatus='${DISABLED}'
+        RETURN COLLECT(DISTINCT {
+            userEmail: u.email,
+            IDP: u.IDP,
+            userStatus: u.userStatus
+        }) as user
+        `
+    const result = await executeQuery(params, cypher, 'user');
+    return result[0];
+}
+
+async function getInactiveUsers() {
+    const cypher =
+        `
+        MATCH (e:Event)
+        WHERE
+            e.event_type = '${LOGIN}' AND
+            // 86400 * 1000 millisecond = 1 day
+            toInteger(e.timestamp) + (86400 * 1000 * ${config.inactive_user_days}) > toInteger(timestamp())
+        WITH COLLECT(DISTINCT e.user_id) AS activeUsers
+        MATCH (u:User)
+        WHERE
+            NOT u.userStatus = '${DISABLED}'
+        WITH COLLECT(DISTINCT u.userID) AS enabledUsers, activeUsers
+        MATCH (u:User)
+        WHERE
+            u.userID IN enabledUsers AND
+            NOT u.userID IN activeUsers
+        RETURN COLLECT(DISTINCT {
+            userID: u.userID,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            userEmail: u.email,
+            IDP: u.IDP,
+            role: u.role,
+            organization: u.organization
+        }) as user
+        `
+    const result = await executeQuery({}, cypher, 'user');
+    return result[0];
+}
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -647,6 +710,9 @@ exports.searchValidRequestArm = searchValidRequestArm
 exports.createArms = createArms
 exports.getArmNamesFromArmIds = getArmNamesFromArmIds
 exports.listRequest = listRequest
+exports.getInactiveUsers = getInactiveUsers
+exports.disableUsers = disableUsers
+exports.disableAdminRole = disableAdminRole
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser
