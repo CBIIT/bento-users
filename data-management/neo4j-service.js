@@ -2,13 +2,14 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED, LOGIN} = require("../constants/user-constant");
+const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
     {disableLosslessIntegers: true}
 );
 const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
+const {LOGIN} = require("../bento-event-logging/const/event-types");
 
 //Queries
 async function createArms(arms){
