@@ -20,7 +20,7 @@ const getUniqueArr = (arr) => {return (arr) ? arr.filter((v, i, a) => a.indexOf(
 // Convert an array to string separated string
 const parseArrToStr = (arr, splitter) => {
     if (!arr) return "";
-    const result = arr.filter((e)=> !isUndefined(e)).map((e)=> e);
+    const result = arr.filter((e)=> e && e !== "").map((e)=> e);
     return result.join(splitter ? splitter : "");
 }
 

@@ -1,4 +1,4 @@
-const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive} = require('../util/string-util')
+const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive, parseArrToStr} = require('../util/string-util')
 
 describe('Util Test', () => {
     test('/string case insensitive equal', () => {
@@ -53,9 +53,12 @@ describe('Util Test', () => {
         }
     });
 
-    test('/array to comma split str', () => {
+    test('/parse array to splitted string', () => {
         const tests = [
             {arr: ["a", "b", "c", "d"], splitter: ",", result: "a,b,c,d"},
+            {arr: ["a", "b", "", ""], splitter: ",", result: "a,b"},
+            {arr: [null, undefined, "a", "b"], splitter: ",", result: "a,b"},
+            {arr: ['a', undefined, "b"], splitter: ",", result: "a,b"},
             {arr: ["a"], result: "a"},
             {arr: undefined, result: ""},
             {arr: ["a","b,"], splitter: ",", result: "a,b,"},
