@@ -19,6 +19,7 @@ const {saveUserInfoToSession} = require("../services/session");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
+const {disableNotification} = require("../services/notify-user");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -402,32 +403,24 @@ const listRequest = async (params, context) => {
 }
 
 const disableInactiveUsers = async () => {
-    const users = await neo4j.getInactiveUsers();
-    if (users) {
-        let disableAdminIDs = [];
-        let disableUserIDs = [];
-        users.forEach((user)=> {
-            if (isCaseInsensitiveEqual(user.role, ADMIN)) {
-                disableAdminIDs.push(user.userID);
-            }
-            disableUserIDs.push(user.userID);
-        });
+    const disableUsers = await neo4j.getInactiveUsers();
+    if (disableUsers && disableUsers.length > 0) {
         // Disable inactive users
-        if (disableUserIDs.length > 0) {
-            const disabledUsers = await neo4j.disableUsers({ids: disableUserIDs});
-            if (!disabledUsers && disabledUsers.length == 0)
-                console.error("Disabling users failed");
+        const disabledUsers = await neo4j.disableUsers({ids: disableUsers.map( (u) => u.userID)});
+        if (!disabledUsers || disabledUsers.length == 0) {
+            console.error("Disabling users failed");
+            return;
         }
-
-        // Disable admin ids
+        // Email Notification
+        await(disableNotification(disabledUsers));
+        // Disable admin status
+        const disableAdminIDs = disableUsers.filter((u)=> isCaseInsensitiveEqual(u.role, ADMIN)).map((u) => (u.userID));
         if (disableAdminIDs.length > 0) {
             const disabledAdmins = await neo4j.disableAdminRole({ids: disableAdminIDs}, MEMBER);
-            if (!disabledAdmins && disabledAdmins.length == 0)
-                console.error("Changing the admin role failed");
+            if (!disabledAdmins || disabledAdmins.length == 0) console.error("Disabling the admin role failed");
         }
     }
-    // TODO email notification
-    return users;
+    return disableUsers;
 }
 
 module.exports = {

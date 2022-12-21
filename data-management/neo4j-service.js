@@ -43,6 +43,7 @@ async function getAccesses(userID, accessStatuses){
     return result[0];
 }
 
+// TODO delete
 async function getAdminEmails() {
     const cypher =
         `
@@ -51,6 +52,21 @@ async function getAdminEmails() {
         RETURN COLLECT(DISTINCT n.email) AS result
     `
     const result = await executeQuery({}, cypher, 'result');
+    return result[0];
+}
+
+async function getAdmins() {
+    const cypher =
+        `
+        MATCH (u:User)
+        WHERE u.role = '${ADMIN}' AND u.userStatus = '${ACTIVE}'
+        RETURN COLLECT (DISTINCT {
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email
+        }) AS user
+    `
+    const result = await executeQuery({}, cypher, 'user');
     return result[0];
 }
 
@@ -580,6 +596,10 @@ async function disableUsers(params) {
         WHERE u.userID IN $ids
         SET u.userStatus='${DISABLED}'
         RETURN COLLECT(DISTINCT {
+            firstName: u.firstName,
+            lastName: u.lastName,
+            role: u.email,
+            organization: u.organization,
             userEmail: u.email,
             IDP: u.IDP,
             userStatus: u.userStatus
@@ -713,6 +733,7 @@ exports.listRequest = listRequest
 exports.getInactiveUsers = getInactiveUsers
 exports.disableUsers = disableUsers
 exports.disableAdminRole = disableAdminRole
+exports.getAdmins = getAdmins
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

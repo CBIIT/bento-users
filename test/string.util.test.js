@@ -52,4 +52,27 @@ describe('Util Test', () => {
             expect(result).toBe(t.result);
         }
     });
+
+    test('/array to comma split str', () => {
+        const tests = [
+            {arr: ["a", "b", "c", "d"], splitter: ",", result: "a,b,c,d"},
+            {arr: ["a"], result: "a"},
+            {arr: undefined, result: ""},
+            {arr: ["a","b,"], splitter: ",", result: "a,b,"},
+            {arr: [], splitter: ",", result: ""},
+            {arr: undefined, splitter: ",", result: ""},
+            {arr: undefined, splitter: null, result: ""},
+            {arr: null, splitter: null, result: ""},
+            {arr: ["a","b"], splitter: ":", result: "a:b"},
+            {arr: ["a","b"], splitter: " ", result: "a b"}
+        ];
+
+        for (let test of tests) {
+            const result = parseArrToStr(test.arr,test.splitter);
+            expect(result).toBe(test.result);
+        }
+
+        // No splitter
+        expect(parseArrToStr(["ab", "cd"])).toBe("abcd");
+    });
 });
