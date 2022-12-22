@@ -16,12 +16,12 @@ function isElementInArrayCaseInsensitive(array, target) {
 const getUniqueArr = (arr) => {return (arr) ? arr.filter((v, i, a) => a.indexOf(v) === i) : []};
 
 
-// By default, empty splitter
+// By default, a comma splitter
 // Convert an array to string separated string
 const parseArrToStr = (arr, splitter) => {
     if (!arr) return "";
     const result = arr.filter((e)=> e && e !== "").map((e)=> e);
-    return result.join(splitter ? splitter : "");
+    return result.join(splitter ? splitter : ",");
 }
 
 const isUndefined = (p) => {

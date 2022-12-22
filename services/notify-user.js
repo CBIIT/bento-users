@@ -15,7 +15,7 @@ const notifyDisabledUsers = async (disableUsers) => {
             "$inactiveDays": config.inactive_user_days,
             "$systemURL": config.server_host
         };
-        promises.push(await asyncNotify(user.userEmail, msg));
+        promises.push(asyncNotify(user.userEmail, msg));
     }
     // Notify disabled users
     await Promise.all(promises);
@@ -33,9 +33,9 @@ const notifyAdminDisabledUsers = async (disableUsers) => {
                 firstName : admin.firstName,
                 lastName: admin.lastName,
                 "$inactiveDays": config.inactive_user_days,
-                "$disableUser": parseArrToStr([u.firstName, u.lastName, u.role, u.organization], ","),
+                "$disableUser": parseArrToStr([u.firstName, u.lastName, u.role, u.organization]),
             }
-            promises.push(await asyncNotify(admin.email, msg));
+            promises.push(asyncNotify(admin.email, msg));
         }
     }
     // Notify All Admin

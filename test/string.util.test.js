@@ -76,6 +76,6 @@ describe('Util Test', () => {
         }
 
         // No splitter
-        expect(parseArrToStr(["ab", "cd"])).toBe("abcd");
+        expect(parseArrToStr(["ab", "cd"])).toBe("ab,cd");
     });
 });
