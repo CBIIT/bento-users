@@ -28,6 +28,7 @@ const config = {
 
   //Seed data for initialization
   seed_data_file: process.env.SEED_DATA_FILE,
+  server_host: process.env.SERVER_HOST ? process.env.SERVER_HOST : "https://www.bento-tools.org"
 };
 
 function getTransportConfig() {
