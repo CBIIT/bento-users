@@ -74,7 +74,7 @@ app.get('/api/users/version', function (req, res, next) {
 });
 
 // Scheduled cronjob twice a day(5am, 8pm)
-cronJob.schedule("1 0 5/20 * * *", async () => {
+cronJob.schedule("1 0 5,20 * * *", async () => {
     console.log("Running a scheduled background task to disable inactive users at " + getTimeNow());
     await disableInactiveUsers();
 });
