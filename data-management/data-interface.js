@@ -15,10 +15,13 @@ const fs = require('fs');
 const LoginCondition = require("../model/valid-conditions/login-condition");
 const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-conditions/arm-conditions");
 const idpCondition = require("../model/valid-conditions/idp-condition");
-const {saveUserInfoToSession} = require("../services/session");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
+const {logRequestArmAccess, logRegisterUser, logApproveAccess, logReview, logEditUser} = require("./event-logging");
+const {Session} = require("neo4j-driver");
+const {getUserByEmailIDP} = require("./neo4j-service");
+const {disableNotification} = require("../services/notify-user");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -46,111 +49,99 @@ const isValidOrThrow = (conditions) => {
 }
 
 const getMyUser = async (_, context) => {
-    isValidOrThrow([new LoginCondition(context.userInfo)]);
-    let result = await neo4j.getMyUser(context.userInfo);
+    let loginInfo = context.userInfo;
+    isValidOrThrow([
+        new LoginCondition(loginInfo.email, loginInfo.IDP)
+    ]);
+    let activeUser = await neo4j.getMyUser(loginInfo);
     // store user if not exists in db
-    if (!result) {
-        saveUserInfoToSession(context, context.userInfo);
-        // no email notification for auto-generated user
-        const user = UserBuilder.createUser(context.userInfo);
-        return await registerUser({ userInfo: user.getUserInfo(), isNotify: false }, context);
+    if (!activeUser) {
+        activeUser =  await registerUser(loginInfo.firstName, loginInfo.lastName, loginInfo.email, loginInfo.IDP, false);
     }
-    saveUserInfoToSession(context, result);
-    return result;
+    updateUserInSession(context, activeUser);
+    return activeUser;
 }
 
 const getUser = async (parameters, context) => {
-    try {
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        //Check if not admin
-        if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        }
-        //Execute query
-        else {
-            let result =  await neo4j.getUser(parameters);
-            return result;
-        }
-    } catch (err) {
-        return err;
+    let activeUser = context.userInfo;
+    if (!verifyUserInfo(activeUser)){
+        throw new Error(errorName.NOT_LOGGED_IN);
     }
+    //Check if not admin
+    if (!await checkAdminPermissions(activeUser)) {
+        throw new Error(errorName.NOT_AUTHORIZED);
+    }
+    let result =  await neo4j.getUserByID(parameters.userID);
+    return result;
 }
 
 const listUsers = async (input, context) => {
-    try {
-        let userInfo = context.userInfo;
-        //Check logged in
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        //Check if not admin
-        else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        }
-        //Execute query
-        else {
-            return neo4j.listUsers(input);
-        }
-    } catch (err) {
-        return err;
+    let activeUser = context.userInfo;
+    //Check logged in
+    if (!verifyUserInfo(activeUser)){
+        throw new Error(errorName.NOT_LOGGED_IN);
     }
+    //Check if not admin
+    if (!await checkAdminPermissions(activeUser)) {
+        throw new Error(errorName.NOT_AUTHORIZED);
+    }
+    //Execute query
+    return neo4j.listUsers(input);
 }
 
 const listArms = async (input, context) => {
-    try{
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
-        else{
-            return await neo4j.listArms(input);
-        }
+    let activeUser = context.userInfo;
+    if (!verifyUserInfo(activeUser)){
+        throw new Error(errorName.NOT_LOGGED_IN);
     }
-    catch (err){
-        return err
-    }
+    return await neo4j.listArms(input);
 }
 
 async function requestAccess(parameters, context) {
+    let activeUser = context.userInfo;
     // Validate login and parameters
-    isValidOrThrow([new LoginCondition(context.userInfo), new ArmRequestParamsCondition(parameters)]);
+    isValidOrThrow([
+        new LoginCondition(activeUser.email, activeUser.IDP),
+        new ArmRequestParamsCondition(parameters.userInfo.armIDs)
+    ]);
     // Get unique list of arm ids
     const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);
     const arms = await searchValidReqArms({armIDs: reqArmIDs}, context);
-    isValidOrThrow([new ArmExistCondition(arms, reqArmIDs)]);
+    isValidOrThrow([
+        new ArmExistCondition(arms, reqArmIDs)
+    ]);
     // Create Arm Access Requests
     const addArmRequestAccessResponse = await addArmRequestAccess(reqArmIDs, context);
-    if (addArmRequestAccessResponse) {
-        // Update the user's info
-        let updateMyUserResponse  = await updateMyUser(parameters, context);
-        // Send email notifications
-        if (config.emails_enabled) {
-            try{
-                let arms = await neo4j.getArmNamesFromArmIds(reqArmIDs);
-                let messageVariables = {
-                    "$arms": arms.join(", "),
-                    "$user": `${context.userInfo.firstName} ${context.userInfo.lastName}`
-                }
-                await notifyTemplate(context.userInfo, messageVariables, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
-            }
-            catch (err) {
-                console.error("Failed to send notification email: "+err);
-            }
-        }
-        // Return the user's information
-        return updateMyUserResponse;
-    }
-    else{
+    if (!addArmRequestAccessResponse) {
         throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
     }
+    // Update the user's info
+    activeUser = await updateMyUser(parameters, context);
+    updateUserInSession(context, activeUser);
+    // Send email notifications
+    if (config.emails_enabled) {
+        try{
+            let arms = await neo4j.getArmNamesFromArmIds(reqArmIDs);
+            let messageVariables = {
+                "$arms": arms.join(", "),
+                "$user": `${activeUser.firstName} ${activeUser.lastName}`
+            }
+            await notifyTemplate(activeUser, messageVariables, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
+        }
+        catch (err) {
+            console.error("Failed to send notification email: "+err);
+        }
+    }
+    await logRequestArmAccess(reqArmIDs, activeUser.email, activeUser.IDP)
+    // Return the user's information
+    return activeUser;
+
 }
 
 const searchValidReqArms = async (parameters, context) => {
-    const user = UserBuilder.createUser(context.userInfo);
-    return await neo4j.searchValidRequestArm({...parameters, invalidStatus: ArmAccess.rejectRequestAccessStatus() }, user);
+    const activeUser = context.userInfo;
+    return await neo4j.searchValidRequestArm(
+        {...parameters, invalidStatus: ArmAccess.rejectRequestAccessStatus() }, activeUser);
 }
 
 const createReqArmParams = (armIDs) => {
@@ -164,21 +155,23 @@ const createReqArmParams = (armIDs) => {
     return listParameters;
 }
 
-const rejectAdminArmRequest = (userInfo)=> {
-    const generalUserCondition = new GeneralUserCondition(userInfo);
+const rejectAdminArmRequest = (email, idp, role)=> {
+    const generalUserCondition = new GeneralUserCondition(email, idp, role);
     generalUserCondition.throwError = ()=> { throw new Error(errorName.INVALID_ADMIN_ARM_REQUEST); };
     return generalUserCondition;
 }
 
 const addArmRequestAccess = async (armIDs, context) => {
-    isValidOrThrow([new idpCondition(context.userInfo), rejectAdminArmRequest(context.userInfo)]);
-    const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), context.userInfo);
-    if (response) {
-        return response;
-    }
-    else{
+    let activeUser = context.userInfo;
+    isValidOrThrow([
+        new idpCondition(activeUser.email, activeUser.IDP),
+        rejectAdminArmRequest(activeUser.email, activeUser.IDP, activeUser.role)
+    ]);
+    const response = await neo4j.requestArmAccess(createReqArmParams(armIDs), activeUser);
+    if (!response) {
         throw new Error(errorName.UNABLE_TO_REQUEST_ARM_ACCESS);
     }
+    return response;
 }
 
 const seedInit = async () => {
@@ -207,118 +200,129 @@ const seedInit = async () => {
     }
 }
 
-const registerUser = async (parameters, context) => {
-    isValidOrThrow([new idpCondition(parameters.userInfo)]);
-    if (!await checkUnique(parameters.userInfo.email, parameters.userInfo.idp)) throw new Error(errorName.NOT_UNIQUE);
-
+const registerUser = async (firstName, lastName, email, IDP, isNotify) => {
+    isValidOrThrow([
+        new idpCondition(email, IDP)]
+    );
+    if (!await checkUnique(email, IDP)) {
+        throw new Error(errorName.NOT_UNIQUE);
+    }
     let generatedInfo = {
+        organization: "",
         userID: v4(),
         status: NONE,
         role: NON_MEMBER
     };
     let registrationInfo = {
-        ...parameters.userInfo,
+        firstName, lastName, email, IDP,
         ...generatedInfo
     };
     let response = await neo4j.registerUser(registrationInfo);
-    const notify = (parameters.isNotify === false) ? parameters.isNotify: true;
     // Send email notification after success
-    if (response && notify) await notifyTemplate(context.userInfo, sendAdminNotification, sendRegistrationConfirmation);
-    if (response) return response;
-    throw new Error(errorName.UNABLE_TO_REGISTER_USER);
+    if (!response){
+        throw new Error(errorName.UNABLE_TO_REGISTER_USER);
+    }
+    if (isNotify) {
+        await notifyTemplate(email, firstName, lastName, sendAdminNotification, sendRegistrationConfirmation);
+    }
+    await logRegisterUser(registrationInfo.userID, registrationInfo.email, registrationInfo.IDP);
+    return response;
 }
 
 
 const approveAccess = async (parameters, context) => {
-    try {
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING, REJECTED, REVOKED])){
-            return new Error(errorName.INVALID_REVIEW_ARMS);
-        }
-        else {
-            parameters.reviewDate = (new Date()).toString();
-            parameters.reviewerEmail = userInfo.email;
-            parameters.reviewerIDP = userInfo.idp;
-            let response = await neo4j.approveAccess(parameters)
-            if (config.emails_enabled && response) {
-                let userData = await neo4j.getUser({userID: parameters.userID});
-                let template_params = {
-                    firstName: userData.firstName,
-                    lastName: userData.lastName,
-                    comment: parameters.comment,
-                }
-                let armIds = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
-                let messageVariables = {
-                    "$arms": armIds.join(", ")
-                }
-                await sendApprovalNotification(userData.email, messageVariables, template_params);
-            }
-            return response;
-        }
-    } catch (err) {
-        return err;
+    const activeUser = context.userInfo;
+    if (!verifyUserInfo(activeUser)){
+        return new Error(errorName.NOT_LOGGED_IN);
     }
+    if (!await checkAdminPermissions(activeUser)) {
+        return new Error(errorName.NOT_AUTHORIZED);
+    }
+    if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING, REJECTED, REVOKED])){
+        return new Error(errorName.INVALID_REVIEW_ARMS);
+    }
+    const initialUserState = await neo4j.getUserByID(parameters.userID);
+    parameters.reviewDate = (new Date()).toString();
+    parameters.reviewerEmail = activeUser.email;
+    parameters.reviewerIDP = activeUser.IDP;
+    let response = await neo4j.approveAccess(parameters)
+    const currentUserState = await neo4j.getUserByID(parameters.userID);
+    if (config.emails_enabled && response) {
+        let template_params = {
+            firstName: currentUserState.firstName,
+            lastName: currentUserState.lastName,
+            comment: parameters.comment,
+        }
+        let armNames = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
+        let messageVariables = {
+            "$arms": armNames.join(", ")
+        }
+        await sendApprovalNotification(currentUserState.email, messageVariables, template_params);
+    }
+    await logReview(APPROVED, parameters.armIDs, currentUserState.email, currentUserState["IDP"] , activeUser.email, activeUser.IDP);
+    await logUserUpdates(activeUser.email, activeUser.IDP, activeUser.userID, initialUserState, currentUserState);
+    return response;
 }
 
 const rejectAccess = async (parameters, context) => {
-    try {
-        let userInfo = context.userInfo;
-        if (!verifyUserInfo(userInfo)){
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING])){
-            return new Error(errorName.INVALID_REVIEW_ARMS);
-        }
-        else {
-            parameters.reviewDate = (new Date()).toString();
-            parameters.reviewerEmail = userInfo.email;
-            parameters.reviewerIDP = userInfo.idp;
-            let response = await neo4j.rejectAccess(parameters)
-            if (config.emails_enabled && response) {
-                let userData = await neo4j.getUser({userID: parameters.userID});
-                let template_params = {
-                    firstName: userData.firstName,
-                    lastName: userData.lastName,
-                    comment: parameters.comment,
-                }
-                let armIds = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
-                let messageVariables = {
-                    "$arms": armIds.join(", ")
-                }
-                await sendRejectionNotification(userData.email, messageVariables, template_params);
-            }
-            return response;
-        }
-    } catch (err) {
-        return err;
+    const activeUser = context.userInfo;
+    if (!verifyUserInfo(activeUser)){
+        return new Error(errorName.NOT_LOGGED_IN);
     }
+    if (!await checkAdminPermissions(activeUser)) {
+        return new Error(errorName.NOT_AUTHORIZED);
+    }
+    if (!await validateInputArms(parameters.userID, parameters.armIDs, [PENDING])){
+        return new Error(errorName.INVALID_REVIEW_ARMS);
+    }
+    const initialUserState = await neo4j.getUserByID(parameters.userID);
+    parameters.reviewDate = (new Date()).toString();
+    parameters.reviewerEmail = activeUser.email;
+    parameters.reviewerIDP = activeUser.IDP;
+    let response = await neo4j.rejectAccess(parameters)
+    const currentUserState = await neo4j.getUserByID(parameters.userID);
+    if (config.emails_enabled && response) {
+        let template_params = {
+            firstName: currentUserState.firstName,
+            lastName: currentUserState.lastName,
+            comment: parameters.comment,
+        }
+        let armNames = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
+        let messageVariables = {
+            "$arms": armNames.join(", ")
+        }
+        await sendRejectionNotification(currentUserState.email, messageVariables, template_params);
+    }
+    await logReview(REJECTED, parameters.armIDs, currentUserState.email, currentUserState.IDP, activeUser.email, activeUser.IDP);
+    await logUserUpdates(activeUser.email, activeUser.IDP, activeUser.userID, initialUserState, currentUserState);
+    return response;
 }
 
 const revokeAccess = async (parameters, context) => {
     try{
-        let userInfo = context.userInfo;
-        if (!userInfo) {
+        const activeUser = context.userInfo;
+        if (!verifyUserInfo(activeUser)) {
             return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
+        }
+        if (!await checkAdminPermissions(activeUser)) {
             return new Error(errorName.NOT_AUTHORIZED);
-        } else if (!await validateInputArms(parameters.userID, parameters.armIDs, [APPROVED])){
+        }
+        if (!await validateInputArms(parameters.userID, parameters.armIDs, [APPROVED])){
             return new Error(errorName.INVALID_REVOKE_ARMS);
         }
-        else {
-            parameters.reviewDate = (new Date()).toString();
-            parameters.reviewerEmail = userInfo.email;
-            parameters.reviewerIDP = userInfo.idp;
-            let response = await neo4j.revokeAccess(parameters)
-            if (config.emails_enabled && response) {
-                // todo implement email notification
-            }
-            return response;
+        const initialUserState = await neo4j.getUserByID(parameters.userID);
+        parameters.reviewDate = (new Date()).toString();
+        parameters.reviewerEmail = activeUser.email;
+        parameters.reviewerIDP = activeUser.IDP;
+        let response = await neo4j.revokeAccess(parameters)
+        const currentUserState = await neo4j.getUserByID(parameters.userID);
+        if (config.emails_enabled && response) {
+            // todo implement email notification
         }
+        await logReview(REVOKED, parameters.armIDs, currentUserState.email, currentUserState.IDP, activeUser.email, activeUser.IDP);
+        await logUserUpdates(activeUser.email, activeUser.IDP, activeUser.userID, initialUserState, currentUserState);
+        return response;
+
     } catch (err) {
         return err;
     }
@@ -340,59 +344,64 @@ const disableAdmin = async (userID, params, context) => {
 }
 
 const editUser = async (parameters, context) => {
-    try {
-        let userInfo = context.userInfo;
-        if (!userInfo) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        } else if (!await checkAdminPermissions(userInfo)) {
-            return new Error(errorName.NOT_AUTHORIZED);
-        } else {
-            if (parameters.role && !isElementInArrayCaseInsensitive(user_roles, parameters.role)) {
-                return new Error(errorName.INVALID_ROLE);
-            }
-            if (parameters.userStatus !== "" && parameters.userStatus && !isElementInArrayCaseInsensitive(user_statuses, parameters.userStatus)) {
-                return new Error(errorName.INVALID_STATUS);
-            }
-            parameters.editDate = (new Date()).toString();
-
-            const adminUserParams = await disableAdmin(parameters.userID, parameters, context);
-            let response = await neo4j.editUser({...parameters,...adminUserParams});
-            if (response) {
-                let template_params = {
-                    firstName: response.firstName,
-                    lastName: response.lastName,
-                    comment: parameters.comment,
-                }
-                await sendEditNotification(response.email, template_params);
-                return response;
-            } else {
-                return new Error(errorName.USER_NOT_FOUND);
-            }
-        }
-    } catch (err) {
-        return err;
+    const activeUser = context.userInfo;
+    if (!verifyUserInfo(activeUser)) {
+        return new Error(errorName.NOT_LOGGED_IN);
     }
+    if (!await checkAdminPermissions(activeUser)) {
+        return new Error(errorName.NOT_AUTHORIZED);
+    }
+    if (parameters.role && !isElementInArrayCaseInsensitive(user_roles, parameters.role)) {
+        return new Error(errorName.INVALID_ROLE);
+    }
+    if (parameters.userStatus !== "" && parameters.userStatus && !isElementInArrayCaseInsensitive(user_statuses, parameters.userStatus)) {
+        return new Error(errorName.INVALID_STATUS);
+    }
+    const initialUserState = await neo4j.getUserByID(parameters.userID);
+    parameters.editDate = (new Date()).toString();
+    const adminUserParams = await disableAdmin(parameters.userID, parameters, context);
+    let response = await neo4j.editUser({...parameters,...adminUserParams});
+    const currentUserState = await neo4j.getUserByID(parameters.userID);
+    if (currentUserState.userID === activeUser.userID) {
+        updateUserInSession(context, currentUserState);
+    }
+    if (!response) {
+        return new Error(errorName.USER_NOT_FOUND);
+    }
+    let template_params = {
+        firstName: response.firstName,
+        lastName: response.lastName,
+        comment: parameters.comment,
+    }
+    await sendEditNotification(response.email, template_params);
+    await logUserUpdates(activeUser.email, activeUser.IDP, activeUser.userID, initialUserState, currentUserState);
+    return response;
 }
 
 const updateMyUser = async (parameters, context) => {
-    isValidOrThrow([new LoginCondition(context.userInfo)]);
-    let result = await neo4j.updateMyUser(parameters.userInfo, context.userInfo);
-    context.userInfo = {...context.userInfo, ...parameters.userInfo};
-    return result;
+    let activeUser = context.userInfo;
+    isValidOrThrow([
+        new LoginCondition(activeUser.email, activeUser.IDP)
+    ]);
+    const initialUserState = activeUser;
+    const currentUserState = await neo4j.updateMyUser(parameters.userInfo, context.userInfo);
+    updateUserInSession(context, currentUserState);
+    await logUserUpdates(currentUserState.email, currentUserState.IDP, currentUserState.userID, initialUserState, currentUserState);
+    return currentUserState;
 }
 
 function verifyUserInfo(userInfo) {
-    return userInfo && userInfo.email && userInfo.idp;
+    return userInfo && userInfo.email && userInfo.IDP;
 }
 
 const listRequest = async (params, context) => {
-    let userInfo = context.userInfo;
+    let activeUser = context.userInfo;
     //Check logged in
-    if (!verifyUserInfo(userInfo)) {
+    if (!verifyUserInfo(activeUser)) {
         return new Error(errorName.NOT_LOGGED_IN);
     }
     //Check if not admin
-    else if (!await checkAdminPermissions(userInfo)) {
+    else if (!await checkAdminPermissions(activeUser)) {
         return new Error(errorName.NOT_AUTHORIZED);
     }
     //Execute query
@@ -401,11 +410,62 @@ const listRequest = async (params, context) => {
     }
 }
 
+async function logUserUpdates(actingUserEmail, actingUserIDP, actingUserID, prevUserInfo, newUserInfo){
+    const requiredFields = ["firstName", "lastName", "organization", "role", "userStatus"];
+    for (const field of requiredFields) {
+       if (!prevUserInfo[field]) {
+           missingRequiredFieldWarning(prevUserInfo.userID, field);
+       }
+       else if (!newUserInfo[field]){
+           missingRequiredFieldWarning(newUserInfo.userID, field);
+       }
+       else if (prevUserInfo[field] !== newUserInfo[field]){
+           await logEditUser(field, prevUserInfo[field], newUserInfo[field], actingUserID, actingUserEmail,
+               actingUserIDP, newUserInfo.userID, newUserInfo.email, newUserInfo.IDP);
+       }
+    }
+    const optionalFields = ["organization"];
+    for (const field of optionalFields) {
+        if (prevUserInfo[field] !== newUserInfo[field]){
+            await logEditUser(field, prevUserInfo[field], newUserInfo[field], actingUserID, actingUserEmail,
+                actingUserIDP, newUserInfo.userID, newUserInfo.email, newUserInfo.IDP);
+        }
+    }
+}
+
+function missingRequiredFieldWarning(userID, field){
+    console.error(`The user with ID:'${userID}' is missing the required field '${field}'.`)
+}
+
+function updateUserInSession(context, user){
+    context.userInfo = user;
+
+const disableInactiveUsers = async () => {
+    const disableUsers = await neo4j.getInactiveUsers();
+    if (disableUsers && disableUsers.length > 0) {
+        // Disable inactive users
+        const disabledUsers = await neo4j.disableUsers({ids: disableUsers.map( (u) => u.userID)});
+        if (!disabledUsers || disabledUsers.length == 0) {
+            console.error("Disabling users failed");
+            return;
+        }
+        // Email Notification
+        await(disableNotification(disabledUsers));
+        // Disable admin status
+        const disableAdminIDs = disableUsers.filter((u)=> isCaseInsensitiveEqual(u.role, ADMIN)).map((u) => (u.userID));
+        if (disableAdminIDs.length > 0) {
+            const disabledAdmins = await neo4j.disableAdminRole({ids: disableAdminIDs}, MEMBER);
+            if (!disabledAdmins || disabledAdmins.length == 0) console.error("Disabling the admin role failed");
+        }
+    }
+    return disableUsers;
+}
+
 module.exports = {
     getMyUser,
     getUser,
     listUsers,
-    registerUser,
+    registerUser: registerUser,
     rejectAccess,
     editUser,
     listArms,
@@ -415,7 +475,8 @@ module.exports = {
     searchValidReqArms,
     requestAccess,
     seedInit,
-    listRequest
+    listRequest,
+    disableInactiveUsers
     // deleteUser: deleteUser,
     // disableUser: disableUser,
 }

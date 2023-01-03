@@ -2,13 +2,14 @@ const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
-const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE} = require("../constants/user-constant");
+const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../constants/user-constant");
 const driver = neo4j.driver(
     config.NEO4J_URI,
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
     {disableLosslessIntegers: true}
 );
 const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
+const {LOGIN} = require("../bento-event-logging/const/event-types");
 
 //Queries
 async function createArms(arms){
@@ -42,6 +43,7 @@ async function getAccesses(userID, accessStatuses){
     return result[0];
 }
 
+// TODO delete
 async function getAdminEmails() {
     const cypher =
         `
@@ -50,6 +52,21 @@ async function getAdminEmails() {
         RETURN COLLECT(DISTINCT n.email) AS result
     `
     const result = await executeQuery({}, cypher, 'result');
+    return result[0];
+}
+
+async function getAdmins() {
+    const cypher =
+        `
+        MATCH (u:User)
+        WHERE u.role = '${ADMIN}' AND u.userStatus = '${ACTIVE}'
+        RETURN COLLECT (DISTINCT {
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email
+        }) AS user
+    `
+    const result = await executeQuery({}, cypher, 'user');
     return result[0];
 }
 
@@ -89,7 +106,7 @@ async function getMyUser(parameters) {
     const cypher =
         `
         MATCH (user:User)
-        WHERE user.email = $email AND user.IDP = $idp
+        WHERE user.email = $email AND user.IDP = $IDP
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
@@ -120,11 +137,48 @@ async function getMyUser(parameters) {
     return result[0];
 }
 
-async function getUser(parameters) {
+async function getUserByID(userID) {
+    let parameters = {userID};
     const cypher =
         `
         MATCH (user:User)
         WHERE user.userID = $userID
+        OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
+        OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
+        OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        WITH user, COLLECT(DISTINCT request{
+            armID: arm.id,
+            armName: arm.name,
+            accessStatus: request.accessStatus,
+            requestDate: request.requestDate,
+            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+            reviewDate: request.reviewDate,
+            comment: request.comment
+        }) as acl
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            organization: user.organization,
+            userID: user.userID,
+            email: user.email,
+            IDP: user.IDP,
+            role: user.role,
+            userStatus: user.userStatus,
+            creationDate: user.creationDate,
+            editDate: user.editDate,
+            acl: acl
+        } AS user
+        `
+    const result = await executeQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
+async function getUserByEmailIDP(email, IDP) {
+    let parameters = {email, IDP};
+    const cypher =
+        `
+        MATCH (user:User)
+        WHERE user.email = $email AND user.IDP = $IDP
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
@@ -216,7 +270,7 @@ async function requestArmAccess(listParams, userInfo) {
         const cypher =
             `
             MATCH (user:User) 
-            WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.idp}'
+            WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.IDP}'
             OPTIONAL MATCH (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
             WHERE arm.id=$armID AND access.accessStatus IN ['${REJECTED}', '${REVOKED}']
             DETACH DELETE access
@@ -238,7 +292,7 @@ async function searchValidRequestArm(parameters, user) {
     const cypher =
         `
         MATCH (user:User)
-        WHERE user.email='${user.getEmail()}' and user.IDP ='${user.getIDP()}'
+        WHERE user.email='${user.email}' and user.IDP ='${user.IDP}'
         MATCH (user)<-[:of_user]-(req:Access)
         WHERE req.accessStatus in $invalidStatus
         MATCH (req)-[:of_arm]->(userArm:Arm)
@@ -260,7 +314,7 @@ async function registerUser(parameters) {
             firstName: $firstName,
             lastName: $lastName,
             email: $email,
-            IDP: $idp,
+            IDP: $IDP,
             organization: $organization,
             userID: $userID,
             creationDate: '${getTimeNow()}',
@@ -466,7 +520,7 @@ async function updateMyUser(parameters, userInfo) {
         `
         MATCH (user:User)
         WHERE
-            user.email = '${userInfo.email}' AND user.IDP = '${userInfo.idp}'
+            user.email = '${userInfo.email}' AND user.IDP = '${userInfo.IDP}'
         ${!isUndefined(parameters.firstName) ? 'SET user.firstName = $firstName' : ''}
         ${!isUndefined(parameters.lastName) ? 'SET user.lastName = $lastName' : ''}
         ${!isUndefined(parameters.organization) ? 'SET user.organization = $organization' : ''}
@@ -556,6 +610,72 @@ async function listRequest(parameters){
     return result;
 }
 
+async function disableAdminRole(params, newRole) {
+    const cypher =
+        `  
+        MATCH (u: User)
+        WHERE u.role='${ADMIN}' and u.userID in $ids
+        SET u.role='${newRole}'
+        RETURN COLLECT(DISTINCT {
+            userEmail: u.email,
+            IDP: u.IDP,
+            role: u.role
+        }) as user
+        `
+    const result = await executeQuery(params, cypher, 'user');
+    return result[0];
+}
+
+async function disableUsers(params) {
+    const cypher =
+        `
+        MATCH (u: User)
+        WHERE u.userID IN $ids
+        SET u.userStatus='${DISABLED}'
+        RETURN COLLECT(DISTINCT {
+            firstName: u.firstName,
+            lastName: u.lastName,
+            role: u.email,
+            organization: u.organization,
+            userEmail: u.email,
+            IDP: u.IDP,
+            userStatus: u.userStatus
+        }) as user
+        `
+    const result = await executeQuery(params, cypher, 'user');
+    return result[0];
+}
+
+async function getInactiveUsers() {
+    const cypher =
+        `
+        MATCH (e:Event)
+        WHERE
+            e.event_type = '${LOGIN}' AND
+            // 86400 * 1000 millisecond = 1 day
+            toInteger(e.timestamp) + (86400 * 1000 * ${config.inactive_user_days}) > toInteger(timestamp())
+        WITH COLLECT(DISTINCT e.user_id) AS activeUsers
+        MATCH (u:User)
+        WHERE
+            NOT u.userStatus = '${DISABLED}'
+        WITH COLLECT(DISTINCT u.userID) AS enabledUsers, activeUsers
+        MATCH (u:User)
+        WHERE
+            u.userID IN enabledUsers AND
+            NOT u.userID IN activeUsers
+        RETURN COLLECT(DISTINCT {
+            userID: u.userID,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            userEmail: u.email,
+            IDP: u.IDP,
+            role: u.role,
+            organization: u.organization
+        }) as user
+        `
+    const result = await executeQuery({}, cypher, 'user');
+    return result[0];
+}
 // async function updateMyUser(parameters) {
 //     const cypher =
 //         `
@@ -606,7 +726,7 @@ async function wipeDatabase() {
 }
 
 async function executeQuery(parameters, cypher, returnLabel) {
-    const session = driver.session();
+    const session = neo4jConnection.session();
     const tx = session.beginTransaction();
     try {
         const result = await tx.run(cypher, parameters);
@@ -626,7 +746,8 @@ async function executeQuery(parameters, cypher, returnLabel) {
 
 //Exported functions
 exports.getMyUser = getMyUser
-exports.getUser = getUser
+exports.getUserByID = getUserByID
+exports.getUserByEmailIDP = getUserByEmailIDP
 exports.listUsers = listUsers
 exports.registerUser = registerUser
 exports.rejectAccess = rejectAccess
@@ -647,6 +768,10 @@ exports.searchValidRequestArm = searchValidRequestArm
 exports.createArms = createArms
 exports.getArmNamesFromArmIds = getArmNamesFromArmIds
 exports.listRequest = listRequest
+exports.getInactiveUsers = getInactiveUsers
+exports.disableUsers = disableUsers
+exports.disableAdminRole = disableAdminRole
+exports.getAdmins = getAdmins
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

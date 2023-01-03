@@ -34,13 +34,12 @@ const formatMap = initFormatMap([valid_idps, user_roles, user_statuses, access_s
 
 module.exports = graphqlHTTP((req, res) => {
     req.body.variables = formatVariables(req.body.variables, ["role", "userStatus", "accessStatus"], formatMap);
+    req.session.userInfo = formatVariables(req.session.userInfo, ["IDP"], formatMap);
     return {
         graphiql: true,
         schema: schema,
         rootValue: root,
-        context: {
-            userInfo: formatVariables(req.session.userInfo, ["idp"], formatMap)
-        },
+        context: req.session,
         customFormatErrorFn: (error) => {
             let status = undefined;
             let body = {error: undefined};

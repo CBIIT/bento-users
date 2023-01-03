@@ -1,5 +1,5 @@
 const UserBuilder = require("../model/user");
-const {MEMBER, NONE} = require("../constants/user-constant");
+const {MEMBER, NONE} = require("../bento-event-logging/const/user-constant");
 
 describe('User Class Test', () => {
     const firstName = 'first';

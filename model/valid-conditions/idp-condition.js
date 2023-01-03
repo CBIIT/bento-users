@@ -2,9 +2,8 @@ const {errorName, valid_idps} = require("../../data-management/graphql-api-const
 const {isElementInArrayCaseInsensitive} = require("../../util/string-util");
 const InputCondition = require("./input-condition");
 class idpCondition extends InputCondition {
-    constructor(userInfo) {
-        super(userInfo);
-        this._idp = userInfo.idp;
+    constructor(email, IDP) {
+        super(email, IDP);
     }
 
     isValid() {

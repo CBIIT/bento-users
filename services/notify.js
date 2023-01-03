@@ -45,7 +45,7 @@ function asArray(values = []) {
         : [values];
 }
 
-const notifyTemplate = async (userInfo, messageVariables, sendAdmin, sendUser) => {
+const notifyTemplate = async (email, firstName, lastName, messageVariables, sendAdmin, sendUser) => {
     // send admin notification
     const notifyAdmin = async () => {
         if (sendAdmin) {
