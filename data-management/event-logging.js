@@ -4,7 +4,7 @@ const {ReviewEvent} = require("../bento-event-logging/model/review-event");
 const {UpdateEvent} = require("../bento-event-logging/model/update-event");
 const {logEvent, getUserID} = require("../bento-event-logging/neo4j/neo4j-operations");
 const {neo4jConnection, getArmNamesFromArmIds} = require("./neo4j-service");
-const {PENDING, APPROVED, REJECTED, REVOKED} = require("../constants/access-constant");
+const {PENDING, APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
 
 
 const logRequestArmAccess = async (armIDs, userEmail, userIDP) => {

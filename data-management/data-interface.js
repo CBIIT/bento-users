@@ -1,10 +1,10 @@
 const {v4} = require('uuid')
 const neo4j = require('./neo4j-service')
-const {errorName, user_roles, user_statuses} = require("./graphql-api-constants");
+const {errorName} = require("./graphql-api-constants");
 const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotification, sendRejectionNotification,
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
-const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../constants/user-constant");
+const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../bento-event-logging/const/user-constant");
 const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive} = require("../util/string-util");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
@@ -15,10 +15,11 @@ const LoginCondition = require("../model/valid-conditions/login-condition");
 const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-conditions/arm-conditions");
 const idpCondition = require("../model/valid-conditions/idp-condition");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
-const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
+const {PENDING, REJECTED, REVOKED, APPROVED} = require("../bento-event-logging/const/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
 const {logRequestArmAccess, logRegisterUser, logReview, logEditUser} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
+const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
