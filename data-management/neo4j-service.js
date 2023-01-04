@@ -110,7 +110,8 @@ async function getMyUser(parameters) {
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
+        // a disabled user does not have access to acl
+        WITH user, CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT request{
             armID: arm.id,
             armName: arm.name,
             accessStatus: request.accessStatus,
@@ -118,7 +119,7 @@ async function getMyUser(parameters) {
             reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
             reviewDate: request.reviewDate,
             comment: request.comment
-        }) as acl
+        }) END as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
