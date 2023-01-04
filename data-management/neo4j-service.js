@@ -726,7 +726,7 @@ async function wipeDatabase() {
 }
 
 async function executeQuery(parameters, cypher, returnLabel) {
-    const session = neo4jConnection.session();
+    const session = driver.session();
     const tx = session.beginTransaction();
     try {
         const result = await tx.run(cypher, parameters);
@@ -772,6 +772,7 @@ exports.getInactiveUsers = getInactiveUsers
 exports.disableUsers = disableUsers
 exports.disableAdminRole = disableAdminRole
 exports.getAdmins = getAdmins
+exports.neo4jConnection = driver;
 // exports.deleteUser = deleteUser
 // exports.disableUser = disableUser
 // exports.updateMyUser = updateMyUser

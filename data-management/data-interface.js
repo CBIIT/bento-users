@@ -6,7 +6,6 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
 } = require("./notifications");
 const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../constants/user-constant");
 const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive} = require("../util/string-util");
-const UserBuilder = require("../model/user");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
@@ -18,9 +17,7 @@ const idpCondition = require("../model/valid-conditions/idp-condition");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../constants/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
-const {logRequestArmAccess, logRegisterUser, logApproveAccess, logReview, logEditUser} = require("./event-logging");
-const {Session} = require("neo4j-driver");
-const {getUserByEmailIDP} = require("./neo4j-service");
+const {logRequestArmAccess, logRegisterUser, logReview, logEditUser} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
 
 async function checkUnique(email, IDP){
@@ -439,6 +436,7 @@ function missingRequiredFieldWarning(userID, field){
 
 function updateUserInSession(context, user){
     context.userInfo = user;
+}
 
 const disableInactiveUsers = async () => {
     const disableUsers = await neo4j.getInactiveUsers();
