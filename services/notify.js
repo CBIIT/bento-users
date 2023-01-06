@@ -61,9 +61,9 @@ const notifyTemplate = async (email, firstName, lastName, messageVariables, send
 
     const notifyUser = async () => {
         if (sendUser)  {
-            await sendUser(userInfo.email, messageVariables, {
-                firstName: userInfo.firstName,
-                lastName: userInfo.lastName
+            await sendUser(email, messageVariables, {
+                firstName: firstName,
+                lastName: lastName
             })
         }
     }

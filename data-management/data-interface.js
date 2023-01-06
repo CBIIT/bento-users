@@ -124,7 +124,8 @@ async function requestAccess(parameters, context) {
                 "$arms": arms.join(", "),
                 "$user": `${activeUser.firstName} ${activeUser.lastName}`
             }
-            await notifyTemplate(activeUser, messageVariables, notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
+            await notifyTemplate(activeUser.email, activeUser.firstName, activeUser.lastName, messageVariables,
+                notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
         }
         catch (err) {
             console.error("Failed to send notification email: "+err);
@@ -411,10 +412,10 @@ const listRequest = async (params, context) => {
 async function logUserUpdates(actingUserEmail, actingUserIDP, actingUserID, prevUserInfo, newUserInfo){
     const requiredFields = ["firstName", "lastName", "organization", "role", "userStatus"];
     for (const field of requiredFields) {
-       if (!prevUserInfo[field]) {
+       if (prevUserInfo[field] === undefined) {
            missingRequiredFieldWarning(prevUserInfo.userID, field);
        }
-       else if (!newUserInfo[field]){
+       else if (!newUserInfo[field] === undefined){
            missingRequiredFieldWarning(newUserInfo.userID, field);
        }
        else if (prevUserInfo[field] !== newUserInfo[field]){
