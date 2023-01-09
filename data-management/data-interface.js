@@ -130,7 +130,7 @@ async function requestAccess(parameters, context) {
             console.error("Failed to send notification email: "+err);
         }
     }
-    await logRequestArmAccess(reqArmIDs, activeUser.email, activeUser.IDP)
+    await logRequestArmAccess(reqArmIDs, activeUser.userID, activeUser.email, activeUser.IDP);
     // Return the user's information
     return activeUser;
 

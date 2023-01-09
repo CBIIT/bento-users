@@ -2,15 +2,14 @@ const {RequestEvent} = require("../bento-event-logging/model/request-event");
 const {RegistrationEvent} = require("../bento-event-logging/model/registration-event");
 const {ReviewEvent} = require("../bento-event-logging/model/review-event");
 const {UpdateEvent} = require("../bento-event-logging/model/update-event");
-const {getArmNamesFromArmIds, getArmsFromArmIds, logEventNeo4j, getUserByEmailIDP} = require("./neo4j-service");
+const {getArmsFromArmIds, logEventNeo4j, getUserByEmailIDP} = require("./neo4j-service");
 const {PENDING, APPROVED, REVOKED} = require("../bento-event-logging/const/access-constant");
 
 
-const logRequestArmAccess = async (armIDs, userEmail, userIDP) => {
-    let userID = await getUserByEmailIDP(userEmail, userIDP);
-    for (const armID of armIDs) {
-        const armName = (await getArmNamesFromArmIds([armID]))[0];
-        const requestEvent = new RequestEvent(armID, armName, userID, userEmail, userIDP);
+const logRequestArmAccess = async (armIDs, userID, userEmail, userIDP) => {
+    const arms = await getArmsFromArmIds(armIDs);
+    for (const arm of arms) {
+        const requestEvent = new RequestEvent(arm.properties.id, arm.properties.name, userID, userEmail, userIDP);
         await logEventNeo4j(requestEvent);
     }
 };
