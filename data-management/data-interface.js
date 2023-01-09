@@ -69,8 +69,7 @@ const getUser = async (parameters, context) => {
     if (!await checkAdminPermissions(activeUser)) {
         throw new Error(errorName.NOT_AUTHORIZED);
     }
-    let result =  await neo4j.getUserByID(parameters.userID);
-    return result;
+    return await neo4j.getUserByID(parameters.userID);
 }
 
 const listUsers = async (input, context) => {
@@ -174,10 +173,10 @@ const addArmRequestAccess = async (armIDs, context) => {
 }
 
 const seedInit = async () => {
-    let seedData = undefined;
+    let seedData;
     if ((await neo4j.getAdminEmails()).length < 1){
         try{
-            seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
+            seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'), 'utf8');
             let admin = {...seedData.admin, ...{userID: v4(), role: ADMIN, status: ACTIVE}};
             await neo4j.registerUser(admin);
             console.log("Seed admin initialized in database");
@@ -188,7 +187,7 @@ const seedInit = async () => {
     if ((await neo4j.listArms()).length < 1){
        try{
            if (seedData === undefined){
-               seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'));
+               seedData = yaml.load(fs.readFileSync(config.seed_data_file, 'utf8'), 'utf8');
            }
            let arms = seedData.arms;
            await neo4j.createArms(arms);
@@ -445,7 +444,7 @@ const disableInactiveUsers = async () => {
     if (disableUsers && disableUsers.length > 0) {
         // Disable inactive users
         const disabledUsers = await neo4j.disableUsers({ids: disableUsers.map( (u) => u.userID)});
-        if (!disabledUsers || disabledUsers.length == 0) {
+        if (!disabledUsers || disabledUsers.length === 0) {
             console.error("Disabling users failed");
             return;
         }
@@ -455,7 +454,7 @@ const disableInactiveUsers = async () => {
         const disableAdminIDs = disableUsers.filter((u)=> isCaseInsensitiveEqual(u.role, ADMIN)).map((u) => (u.userID));
         if (disableAdminIDs.length > 0) {
             const disabledAdmins = await neo4j.disableAdminRole({ids: disableAdminIDs}, MEMBER);
-            if (!disabledAdmins || disabledAdmins.length == 0) console.error("Disabling the admin role failed");
+            if (!disabledAdmins || disabledAdmins.length === 0) console.error("Disabling the admin role failed");
         }
     }
     return disableUsers;
@@ -477,6 +476,4 @@ module.exports = {
     seedInit,
     listRequest,
     disableInactiveUsers
-    // deleteUser: deleteUser,
-    // disableUser: disableUser,
-}
+};

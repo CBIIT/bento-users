@@ -36,7 +36,7 @@ module.exports = graphqlHTTP((req, res) => {
         rootValue: root,
         context: req.session,
         customFormatErrorFn: (error) => {
-            let status = undefined;
+            let status;
             let body = {error: undefined};
             try {
                 status = errorType[error.message].statusCode;

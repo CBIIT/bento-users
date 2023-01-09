@@ -8,8 +8,9 @@ const driver = neo4j.driver(
     neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
     {disableLosslessIntegers: true}
 );
-const {PENDING, APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
+const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
 const {LOGIN} = require("../bento-event-logging/const/event-types");
+const {executeQuery, logEvent} = require("../bento-event-logging/neo4j/neo4j-operations");
 
 //Queries
 async function createArms(arms){
@@ -22,7 +23,7 @@ async function createArms(arms){
             SET arm.acronym = $acronym
             RETURN arm
         `
-        let result = await executeQuery(arm, cypher, 'arm');
+        let result = await runNeo4jQuery(arm, cypher, 'arm');
         if (!result[0]){
             throw new Error("Failed to initialize arm with the following data: "+arm);
         }
@@ -39,7 +40,7 @@ async function getAccesses(userID, accessStatuses){
         WHERE a.accessStatus IN $accessStatuses
         RETURN COLLECT(DISTINCT arm.id) AS result
     `
-    const result = await executeQuery(parameters, cypher, 'result');
+    const result = await runNeo4jQuery(parameters, cypher, 'result');
     return result[0];
 }
 
@@ -51,7 +52,7 @@ async function getAdminEmails() {
         WHERE n.role = '${ADMIN}' AND n.userStatus = '${ACTIVE}'
         RETURN COLLECT(DISTINCT n.email) AS result
     `
-    const result = await executeQuery({}, cypher, 'result');
+    const result = await runNeo4jQuery({}, cypher, 'result');
     return result[0];
 }
 
@@ -66,7 +67,7 @@ async function getAdmins() {
             email: u.email
         }) AS user
     `
-    const result = await executeQuery({}, cypher, 'user');
+    const result = await runNeo4jQuery({}, cypher, 'user');
     return result[0];
 }
 
@@ -78,29 +79,10 @@ async function checkUnique(key) {
         WITH COLLECT(DISTINCT n.IDP+":"+n.email) AS keys
         RETURN NOT $key in keys as result
     `
-    const result = await executeQuery(parameters, cypher, 'result');
+    const result = await runNeo4jQuery(parameters, cypher, 'result');
     return result[0];
 }
 
-async function checkAlreadyApproved(userID) {
-    return checkStatus(userID, APPROVED);
-}
-
-async function checkAlreadyRejected(userID) {
-    return checkStatus(userID, REJECTED);
-}
-
-async function checkStatus(userID, status) {
-    let parameters = {userID: userID, status: status};
-    const cypher =
-        `
-        MATCH (n:User)
-            WHERE n.userID = $userID
-        RETURN n.status = $status as result
-    `
-    const result = await executeQuery(parameters, cypher, 'result');
-    return result[0];
-}
 
 async function getMyUser(parameters) {
     const cypher =
@@ -134,7 +116,7 @@ async function getMyUser(parameters) {
             acl: acl
         } AS user
         `
-    const result = await executeQuery(parameters, cypher, 'user');
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
     return result[0];
 }
 
@@ -170,7 +152,7 @@ async function getUserByID(userID) {
             acl: acl
         } AS user
         `
-    const result = await executeQuery(parameters, cypher, 'user');
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
     return result[0];
 }
 
@@ -206,7 +188,7 @@ async function getUserByEmailIDP(email, IDP) {
             acl: acl
         } AS user
         `
-    const result = await executeQuery(parameters, cypher, 'user');
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
     return result[0];
 }
 
@@ -250,7 +232,7 @@ async function listUsers(parameters) {
             acl: acl
         } AS user
     `
-    return await executeQuery(parameters, cypher, 'user');
+    return await runNeo4jQuery(parameters, cypher, 'user');
 }
 
 async function listArms(parameters) {
@@ -262,7 +244,7 @@ async function listArms(parameters) {
             name: arm.name
         } AS arms
     `
-    return await executeQuery(parameters, cypher, 'arms');
+    return await runNeo4jQuery(parameters, cypher, 'arms');
 }
 
 //Mutations
@@ -283,7 +265,7 @@ async function requestArmAccess(listParams, userInfo) {
             SET access.requestID= $requestID
             RETURN access 
             `
-        return await executeQuery(param, cypher, 'access');
+        return await runNeo4jQuery(param, cypher, 'access');
     });
     return await Promise.all(promises);
 }
@@ -302,7 +284,7 @@ async function searchValidRequestArm(parameters, user) {
         WHERE arm.id IN $armIDs and not arm.id in invalidArmIds
         RETURN DISTINCT arm
         `
-    const result = await executeQuery(parameters, cypher, 'arm');
+    const result = await runNeo4jQuery(parameters, cypher, 'arm');
     const arms = [];
     result.forEach(x => arms.push(x.properties));
     return arms;
@@ -325,7 +307,7 @@ async function registerUser(parameters) {
         }) 
         RETURN user
     `
-    const result = await executeQuery(parameters, cypher, 'user');
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
     return result[0].properties;
 }
 
@@ -363,7 +345,7 @@ async function approveAccess(parameters) {
         }) AS acl
         RETURN acl    
     `
-    let result = await executeQuery(parameters, cypher, 'acl');
+    let result = await runNeo4jQuery(parameters, cypher, 'acl');
     return result[0];
 }
 
@@ -393,7 +375,7 @@ async function rejectAccess(parameters) {
         }) AS acl
         RETURN acl    
     `
-    let result = await executeQuery(parameters, cypher, 'acl');
+    let result = await runNeo4jQuery(parameters, cypher, 'acl');
     return result[0];
 }
 
@@ -438,28 +420,11 @@ async function revokeAccess(parameters) {
                 comment: revoked.comment
             }) AS acl
         `
-    let result =  await executeQuery(parameters, cypher, 'acl');
+    let result =  await runNeo4jQuery(parameters, cypher, 'acl');
     return result[0];
 }
 
-async function resetApproval(parameters) {
-    const cypher =
-        `
-        MATCH (user:User)
-        WHERE 
-            user.userID = $userID
-        SET user.status = 'registered'
-        SET user.rejectionDate = Null
-        SET user.approvalDate = Null
-        SET user.comment = Null
-        RETURN user
-    `
-    const result = await executeQuery(parameters, cypher, 'user');
-    if (result && result[0]) {
-        return result[0].properties;
-    }
-    return;
-}
+
 
 async function editUser(parameters) {
     let cypher =
@@ -511,7 +476,7 @@ async function editUser(parameters) {
         `
     }
     cypher = cypher + cypher_return;
-    const result = await executeQuery(parameters, cypher, 'user');
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
     return result[0];
 }
 
@@ -553,7 +518,7 @@ async function updateMyUser(parameters, userInfo) {
             acl: acl
         } AS user
         `;
-    const result = await executeQuery(parameters, cypher, 'user');
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
     return result[0];
 }
 
@@ -565,8 +530,18 @@ async function getArmNamesFromArmIds(armIds) {
         WITH COLLECT(DISTINCT arm.name) as names
         RETURN names
     `;
-    const result = await executeQuery({armIds: armIds}, cypher, 'names');
+    const result = await runNeo4jQuery({armIds: armIds}, cypher, 'names');
     return result[0];
+}
+
+async function getArmsFromArmIds(armIds) {
+    const cypher =
+        `
+        MATCH (arm:Arm)
+        WHERE arm.id IN $armIds
+        RETURN arm AS arms
+    `;
+    return await runNeo4jQuery({armIds: armIds}, cypher, 'arms');
 }
 
 async function listRequest(parameters){
@@ -607,8 +582,7 @@ async function listRequest(parameters){
             acl: COLLECT(DISTINCT acl)
         } as user
     `;
-    let result = await executeQuery(parameters, cypher, 'user');
-    return result;
+    return await runNeo4jQuery(parameters, cypher, 'user');
 }
 
 async function disableAdminRole(params, newRole) {
@@ -623,7 +597,7 @@ async function disableAdminRole(params, newRole) {
             role: u.role
         }) as user
         `
-    const result = await executeQuery(params, cypher, 'user');
+    const result = await runNeo4jQuery(params, cypher, 'user');
     return result[0];
 }
 
@@ -643,7 +617,7 @@ async function disableUsers(params) {
             userStatus: u.userStatus
         }) as user
         `
-    const result = await executeQuery(params, cypher, 'user');
+    const result = await runNeo4jQuery(params, cypher, 'user');
     return result[0];
 }
 
@@ -674,106 +648,47 @@ async function getInactiveUsers() {
             organization: u.organization
         }) as user
         `
-    const result = await executeQuery({}, cypher, 'user');
+    const result = await runNeo4jQuery({}, cypher, 'user');
     return result[0];
 }
-// async function updateMyUser(parameters) {
-//     const cypher =
-//         `
-//         MATCH (user:User)
-//         WHERE
-//             user.email = $email
-//         SET user.firstName = $firstName
-//         SET user.lastName = $lastName
-//         SET user.email = $email
-//         SET user.IDP = $IDP
-//         SET user.organization = $organization
-//         SET user.editDate = $editDate
-//         RETURN user
-//     `
-//     const result = await executeQuery(parameters, cypher, 'user');
-//     return result[0].properties;
-// }
-//
-// async function deleteUser(parameters) {
-//     const cypher =
-//     `
-//         MATCH (user:User)
-//         WHERE
-//             user.userID = $userID
-//         SET user.status = "deleted"
-//         RETURN user
-//     `
-//     const result = await executeQuery(parameters, cypher, 'user');
-//     return result[0].properties;
-// }
-//
-// async function disableUser(parameters) {
-//     const cypher =
-//     `
-//         MATCH (user:User)
-//         WHERE
-//             user.userID = $userID
-//         SET user.status = "disabled"
-//         RETURN user
-//     `
-//     const result = await executeQuery(parameters, cypher, 'user');
-//     return result[0].properties;
-// }
-
 
 async function wipeDatabase() {
-    return await executeQuery({}, `MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n`, {})
+    return await runNeo4jQuery({}, `MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n`, {})
 }
 
-async function executeQuery(parameters, cypher, returnLabel) {
-    const session = driver.session();
-    const tx = session.beginTransaction();
-    try {
-        const result = await tx.run(cypher, parameters);
-        return result.records.map(record => {
-            return record.get(returnLabel)
-        })
-    } catch (error) {
-        throw error;
-    } finally {
-        try {
-            await tx.commit();
-        } catch (err) {
-        }
-        await session.close();
-    }
+async function runNeo4jQuery(parameters, cypher, returnLabel) {
+    return await executeQuery(driver, parameters, cypher, returnLabel);
 }
 
-//Exported functions
-exports.getMyUser = getMyUser
-exports.getUserByID = getUserByID
-exports.getUserByEmailIDP = getUserByEmailIDP
-exports.listUsers = listUsers
-exports.registerUser = registerUser
-exports.rejectAccess = rejectAccess
-exports.approveAccess = approveAccess
-exports.editUser = editUser
-exports.wipeDatabase = wipeDatabase
-exports.checkUnique = checkUnique
-exports.getAdminEmails = getAdminEmails
-exports.checkAlreadyApproved = checkAlreadyApproved
-exports.checkAlreadyRejected = checkAlreadyRejected
-exports.resetApproval = resetApproval
-exports.listArms = listArms
-exports.revokeAccess = revokeAccess
-exports.updateMyUser = updateMyUser
-exports.getAccesses = getAccesses
-exports.requestArmAccess = requestArmAccess
-exports.searchValidRequestArm = searchValidRequestArm
-exports.createArms = createArms
-exports.getArmNamesFromArmIds = getArmNamesFromArmIds
-exports.listRequest = listRequest
-exports.getInactiveUsers = getInactiveUsers
-exports.disableUsers = disableUsers
-exports.disableAdminRole = disableAdminRole
-exports.getAdmins = getAdmins
-exports.neo4jConnection = driver;
-// exports.deleteUser = deleteUser
-// exports.disableUser = disableUser
-// exports.updateMyUser = updateMyUser
+const logEventNeo4j = async function(bentoEvent){
+    return await logEvent(driver, bentoEvent)
+};
+
+module.exports = {
+    getMyUser,
+    getUserByID,
+    listUsers,
+    registerUser,
+    rejectAccess,
+    approveAccess,
+    editUser,
+    wipeDatabase,
+    checkUnique,
+    getAdminEmails,
+    listArms,
+    revokeAccess,
+    updateMyUser,
+    getAccesses,
+    requestArmAccess,
+    searchValidRequestArm,
+    createArms,
+    getArmNamesFromArmIds,
+    listRequest,
+    getInactiveUsers,
+    disableUsers,
+    disableAdminRole,
+    getAdmins,
+    getArmsFromArmIds,
+    logEventNeo4j,
+    getUserByEmailIDP
+};

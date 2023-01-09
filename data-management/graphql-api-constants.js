@@ -1,6 +1,6 @@
-const {PENDING, APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
-const {MEMBER, NON_MEMBER, ADMIN, INACTIVE, ACTIVE, DISABLED, DELETED, NONE} = require("../bento-event-logging/const/user-constant");
-const {valid_idps, user_roles, user_statuses, access_statuses} = require("../bento-event-logging/const/format-constants");
+const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
+const {MEMBER, NON_MEMBER, ADMIN} = require("../bento-event-logging/const/user-constant");
+const {valid_idps, user_roles, user_statuses} = require("../bento-event-logging/const/format-constants");
 
 exports.errorName = {
     INVALID_REVIEW_ARMS: "INVALID_REVIEW_ARMS",
