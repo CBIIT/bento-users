@@ -1,11 +1,12 @@
 const {errorName} = require("../../data-management/graphql-api-constants");
 class LoginCondition {
-    constructor(userInfo) {
-        this._userInfo = userInfo;
+    constructor(email, idp) {
+        this._email = email;
+        this._idp = idp;
     }
 
     isValid() {
-        return this._userInfo && this._userInfo.email && this._userInfo.idp
+        return this._email && this._idp
     }
 
     throwError() {

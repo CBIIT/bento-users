@@ -16,12 +16,12 @@ class ArmExistCondition {
 }
 
 class ArmRequestParamsCondition {
-    constructor(parameters) {
-        this._parameters = parameters;
+    constructor(armIds) {
+        this.armIds = armIds;
     }
 
     isValid() {
-        return this._parameters.userInfo.armIDs;
+        return this.armIds;
     }
 
     throwError() {

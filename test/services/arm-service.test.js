@@ -1,4 +1,4 @@
-const {PENDING, APPROVED} = require("../../constants/access-constant");
+const {PENDING, APPROVED} = require("../../bento-event-logging/const/access-constant");
 const ArmAccess = require("../../model/arm-access");
 const {getApprovedArmIDs} = require("../../services/arm-access");
 

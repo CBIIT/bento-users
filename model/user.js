@@ -1,4 +1,4 @@
-const {NON_MEMBER} = require("../constants/user-constant");
+const {NON_MEMBER} = require("../bento-event-logging/const/user-constant");
 const ArmAccess = require("./arm-access");
 
 class User {

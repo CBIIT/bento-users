@@ -4,8 +4,8 @@ const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessServic
 } = require("../../data-management/neo4j-service");
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
-const {PENDING} = require("../../constants/access-constant");
-const {ADMIN} = require("../../constants/user-constant");
+const {PENDING} = require("../../bento-event-logging/const/access-constant");
+const {ADMIN} = require("../../bento-event-logging/const/user-constant");
 // Create Data management mock
 jest.mock("../../data-management/neo4j-service");
 // Create email notification mock object

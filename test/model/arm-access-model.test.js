@@ -1,6 +1,6 @@
 const ArmAccess = require("../../model/arm-access");
 const Arm = require("../../model/arm");
-const {APPROVED, PENDING} = require("../../constants/access-constant");
+const {APPROVED, PENDING} = require("../../bento-event-logging/const/access-constant");
 
 describe('arm access model', () => {
     test('/create arm access model', ()=> {
