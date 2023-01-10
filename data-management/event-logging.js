@@ -20,16 +20,16 @@ const logRegisterUser = async (userID, userEmail, userIDP) => {
 };
 
 const logReview = async (newStatus, armIDs, requesterEmail, requesterIDP, reviewerEmail, reviewerIDP) => {
-    let reviewerID = await getUserByEmailIDP(reviewerEmail, reviewerIDP);
-    let requesterID = await getUserByEmailIDP(requesterEmail, requesterIDP);
+    let reviewer = await getUserByEmailIDP(reviewerEmail, reviewerIDP);
+    let requester = await getUserByEmailIDP(requesterEmail, requesterIDP);
     let oldStatus = PENDING;
     if (newStatus === REVOKED){
         oldStatus = APPROVED;
     }
     const arms = await getArmsFromArmIds(armIDs);
     for (const arm of arms) {
-        const reviewEvent = new ReviewEvent(arm.id, arm.name, requesterID, requesterEmail, requesterIDP, newStatus,
-            oldStatus, reviewerID, reviewerEmail, reviewerIDP);
+        const reviewEvent = new ReviewEvent(arm.properties.id, arm.properties.name, requester.userID, requesterEmail,
+            requesterIDP, newStatus, oldStatus, reviewer.userID, reviewerEmail, reviewerIDP);
         await logEventNeo4j(reviewEvent);
     }
 }
