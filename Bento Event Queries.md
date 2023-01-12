@@ -1,28 +1,28 @@
 ## Bento Event Queries
 ### Introduction
 This document contains Cypher formatted queries that can be used to retrieve logged Bento events from a Neo4j database. Each entry in the **Queries** section below will contain a description, a list of required parameters, and the associated Cypher command. 
+### Connecting to the Database
+The queries described below can be run using either the **cypher-shell** command line interface or the **Neo4j browser** interface if it is enabled for the Neo4j instance. Cypher shell should be run with the `--format plain` option for the best results format.
 ### Parameter Declaration
 The format of the Cypher command below can be used to define parameters before running a query.
 
 ```
-:params {
-	"stringParameterName1": "String Value 1",
-	"stringParameterName2": "String Value 2",
-	"integerParameterName": 1000
-}
+:param parameterName: "parameterValue";
 ```
 Example:
 ```
-:params {
-	"email": "user@email.com",
-	"IDP": "Test-IDP",
-	"timeStart": 1673355600000,
-	"timeEnd": 1673442000000
-}
+:param email: "user@email.com";
+:param IDP: "Test-IDP";
+:param timeStart: 1673355600000;
+:param timeEnd: 1673442000000;
 ```
-Each parameters command in this format will delete any existing stored parameters. If you want to clear the parameters without defining new ones then you can use a parameter definition Cypher command with no entries as shown below:
+To check the value of a parameter, use the format below for the command:
 ```
-:params {}
+:params parameterName;
+```
+Example:
+```
+:params email;
 ```
 ### Timestamps
 All events have a timestamp formatted as a Unix timestamp in milliseconds. This can be calculated as milliseconds since Jan 01 1970 (UTC). The **timeStart** and **timeEnd** parameters used when querying events should also be in this format. There are many online tools that can be used to convert a human-readable date and time into this format. An example conversion interface can be found here [currentmillis.com](https://currentmillis.com/).
@@ -37,7 +37,7 @@ None
 ```
 MATCH (e:Event)
 RETURN e
-ORDER BY e.timestamp
+ORDER BY e.timestamp;
 ```
 
 #### Get all events for a specific user
@@ -55,7 +55,7 @@ WHERE
 	($email = e.reviewer_email AND $IDP = e.reviewer_idp) OR
 	($email = e.user_email AND $IDP = e.user_idp)
 RETURN e
-ORDER BY e.timestamp
+ORDER BY e.timestamp;
 ```
 
 #### Get all events within a specified time range
@@ -70,7 +70,7 @@ WHERE
 	$timeStart <= toInteger(e.timestamp) AND
 	$timeEnd >= toInteger(e.timestamp)
 RETURN e
-ORDER BY e.timestamp
+ORDER BY e.timestamp;
 ```
 
 #### Get all events for a specific user within a specified time range
@@ -94,5 +94,5 @@ WHERE
 	$timeStart <= toInteger(e.timestamp) AND
 	$timeEnd >= toInteger(e.timestamp)
 RETURN e
-ORDER BY e.timestamp
+ORDER BY e.timestamp;
 ```
