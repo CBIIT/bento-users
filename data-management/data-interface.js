@@ -11,6 +11,7 @@ const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
 const yaml = require('js-yaml');
 const fs = require('fs');
+const fsp = fs.promises;
 const LoginCondition = require("../model/valid-conditions/login-condition");
 const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-conditions/arm-conditions");
 const idpCondition = require("../model/valid-conditions/idp-condition");
@@ -460,6 +461,28 @@ const disableInactiveUsers = async () => {
     return disableUsers;
 }
 
+const downloadEvents = async (req, res) => {
+    const activeUser = req.session.userInfo;
+    if (!verifyUserInfo(activeUser)) {
+        throw new Error(errorName.NOT_LOGGED_IN);
+    }
+    if (!await checkAdminPermissions(activeUser)) {
+        throw new Error(errorName.NOT_AUTHORIZED);
+    }
+    // One million events is roughly estimated to generate a file about 235 MB in size
+    const numEventsLimit = 1000000;
+    const fileName = 'events.json';
+    const allEvents = await neo4j.getRecentEventsNeo4j(numEventsLimit);
+    if (allEvents.length >= numEventsLimit){
+        console.warn("The events.json download contains the maximum number of events and may have been " +
+            "truncated. Please directly query the database to get a comprehensive event log.")
+    }
+    let events = [];
+    allEvents.forEach((x) => {events.push(x.properties)})
+    await fsp.writeFile(fileName, JSON.stringify(events));
+    return fileName;
+}
+
 module.exports = {
     getMyUser,
     getUser,
@@ -475,5 +498,6 @@ module.exports = {
     requestAccess,
     seedInit,
     listRequest,
-    disableInactiveUsers
+    disableInactiveUsers,
+    downloadEvents
 };

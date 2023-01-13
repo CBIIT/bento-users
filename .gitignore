@@ -6,3 +6,4 @@ logs/
 yaml/
 newrelic_agent.log
 .env
+events.json
