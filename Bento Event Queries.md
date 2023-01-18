@@ -36,7 +36,7 @@ None
 ##### Cypher Command
 ```
 MATCH (e:Event)
-RETURN e
+RETURN apoc.date.format(toInteger(e.timestamp), "ms", "yyyy-MM-dd HH:mm:ss", "America/New_York") AS Local_Time, e
 ORDER BY e.timestamp;
 ```
 
@@ -54,7 +54,7 @@ WHERE
 	($email = e.requester_email AND $IDP = e.requester_idp) OR
 	($email = e.reviewer_email AND $IDP = e.reviewer_idp) OR
 	($email = e.user_email AND $IDP = e.user_idp)
-RETURN e
+RETURN apoc.date.format(toInteger(e.timestamp), "ms", "yyyy-MM-dd HH:mm:ss", "America/New_York") AS Local_Time, e
 ORDER BY e.timestamp;
 ```
 
@@ -69,7 +69,7 @@ MATCH (e:Event)
 WHERE
 	$timeStart <= toInteger(e.timestamp) AND
 	$timeEnd >= toInteger(e.timestamp)
-RETURN e
+RETURN apoc.date.format(toInteger(e.timestamp), "ms", "yyyy-MM-dd HH:mm:ss", "America/New_York") AS Local_Time, e
 ORDER BY e.timestamp;
 ```
 
@@ -93,6 +93,6 @@ WHERE
 	) AND
 	$timeStart <= toInteger(e.timestamp) AND
 	$timeEnd >= toInteger(e.timestamp)
-RETURN e
+RETURN apoc.date.format(toInteger(e.timestamp), "ms", "yyyy-MM-dd HH:mm:ss", "America/New_York") AS Local_Time, e
 ORDER BY e.timestamp;
 ```
