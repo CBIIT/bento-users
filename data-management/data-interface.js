@@ -21,6 +21,8 @@ const {getApprovedArmIDs} = require("../services/arm-access");
 const {logRequestArmAccess, logRegisterUser, logReview, logEditUser} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
+const moment = require("moment");
+const path = require("path");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -469,17 +471,32 @@ const downloadEvents = async (req, res) => {
     if (!await checkAdminPermissions(activeUser)) {
         throw new Error(errorName.NOT_AUTHORIZED);
     }
-    // One million events is roughly estimated to generate a file about 235 MB in size
-    const numEventsLimit = 1000000;
-    const fileName = 'events.json';
-    const allEvents = await neo4j.getRecentEventsNeo4j(numEventsLimit);
-    if (allEvents.length >= numEventsLimit){
-        console.warn("The events.json download contains the maximum number of events and may have been " +
-            "truncated. Please directly query the database to get a comprehensive event log.")
+    // Create tmp directory or clear tmp directory if it already exists
+    const tmp_dir = "tmp";
+    if (fs.existsSync(tmp_dir)){
+        for (const file of await fsp.readdir(tmp_dir)) {
+            await fsp.unlink(path.join(tmp_dir, file));
+        }
     }
-    let events = [];
-    allEvents.forEach((x) => {events.push(x.properties)})
-    await fsp.writeFile(fileName, JSON.stringify(events));
+    else{
+        fs.mkdirSync(tmp_dir);
+    }
+    // Write events to file and then return file path
+    const fileName = path.join(tmp_dir, moment().format('YYYY-MM-DD') + '.events.json');
+    const allEvents = await neo4j.getRecentEventsNeo4j(config.event_download_limit);
+    const eventsData = allEvents.map((x) => {
+        return x.properties;
+    });
+    let fileData = {
+        "meta-data": {
+            "user": activeUser.email,
+            "time": moment().format('YYYY MMM DD HH:mm:ss'),
+            "num_events_downloaded": eventsData.length,
+            "event_download_limit": config.event_download_limit
+        },
+        "events" : eventsData
+    };
+    await fsp.writeFile(fileName, JSON.stringify(fileData));
     return fileName;
 }
 

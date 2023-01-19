@@ -28,7 +28,11 @@ const config = {
 
   //Seed data for initialization
   seed_data_file: process.env.SEED_DATA_FILE,
-  server_host: process.env.SERVER_HOST ? process.env.SERVER_HOST : "https://www.bento-tools.org"
+  server_host: process.env.SERVER_HOST ? process.env.SERVER_HOST : "https://www.bento-tools.org",
+
+  //Events Download Endpoint
+  //One million events is roughly estimated to generate a file about 235 MB in size
+  event_download_limit: process.env.EVENT_DOWNLOAD_LIMIT ? Math.MIN(parseInt(process.env.EVENT_DOWNLOAD_LIMIT), 1000000) : 1000000
 };
 
 function getTransportConfig() {

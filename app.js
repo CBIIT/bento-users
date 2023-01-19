@@ -1,4 +1,3 @@
-const newrelic = require('newrelic');
 const graphql = require("./data-management/init-graphql");
 const createError = require('http-errors');
 const express = require('express');
@@ -9,10 +8,9 @@ const cors = require('cors');
 const config = require('./config');
 const {createSession} = require("./services/session");
 const cronJob = require("node-cron");
-const {disableInactiveUsers, downloadEvents} = require("./data-management/data-interface");
+const {disableInactiveUsers} = require("./data-management/data-interface");
 const {getTimeNow} = require("./util/time-util");
-const {errorType} = require("./data-management/graphql-api-constants");
-const {formatErrorResponse} = require("./util/error-util");
+const events_router = require("./data-management/events-router");
 
 //Print configuration
 console.log(config);
@@ -62,18 +60,7 @@ app.use(createSession({ sessionSecret: config.cookie_secret, session_timeout: co
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/users/graphql', graphql);
-app.get('/api/users/events', async function (req, res, next) {
-    try{
-        const path = await downloadEvents(req, res);
-        let options = {
-            root: __dirname
-        };
-        res.sendFile(path, options, (err) => errorHandler(formatErrorResponse(res, err), req, res, next));
-    }
-    catch(error){
-        res.send(formatErrorResponse(res, error));
-    }
-});
+app.use('/api/users', events_router);
 
 /* GET ping-ping for health checking. */
 app.get('/api/users/ping', function (req, res, next) {
