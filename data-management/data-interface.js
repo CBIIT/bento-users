@@ -11,6 +11,7 @@ const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
 const yaml = require('js-yaml');
 const fs = require('fs');
+const fsp = fs.promises;
 const LoginCondition = require("../model/valid-conditions/login-condition");
 const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-conditions/arm-conditions");
 const idpCondition = require("../model/valid-conditions/idp-condition");
@@ -20,6 +21,8 @@ const {getApprovedArmIDs} = require("../services/arm-access");
 const {logRequestArmAccess, logRegisterUser, logReview, logEditUser} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
+const moment = require("moment");
+const path = require("path");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -460,6 +463,43 @@ const disableInactiveUsers = async () => {
     return disableUsers;
 }
 
+const downloadEvents = async (req, res) => {
+    const activeUser = req.session.userInfo;
+    if (!verifyUserInfo(activeUser)) {
+        throw new Error(errorName.NOT_LOGGED_IN);
+    }
+    if (!await checkAdminPermissions(activeUser)) {
+        throw new Error(errorName.NOT_AUTHORIZED);
+    }
+    // Create tmp directory or clear tmp directory if it already exists
+    const tmp_dir = "tmp";
+    if (fs.existsSync(tmp_dir)){
+        for (const file of await fsp.readdir(tmp_dir)) {
+            await fsp.unlink(path.join(tmp_dir, file));
+        }
+    }
+    else{
+        fs.mkdirSync(tmp_dir);
+    }
+    // Write events to file and then return file path
+    const fileName = path.join(tmp_dir, moment().format('YYYY-MM-DD') + '.events.json');
+    const allEvents = await neo4j.getRecentEventsNeo4j(config.event_download_limit);
+    const eventsData = allEvents.map((x) => {
+        return x.properties;
+    });
+    let fileData = {
+        "meta-data": {
+            "user": activeUser.email,
+            "time": moment().format('YYYY MMM DD HH:mm:ss'),
+            "num_events_downloaded": eventsData.length,
+            "event_download_limit": config.event_download_limit
+        },
+        "events" : eventsData
+    };
+    await fsp.writeFile(fileName, JSON.stringify(fileData));
+    return fileName;
+}
+
 module.exports = {
     getMyUser,
     getUser,
@@ -475,5 +515,6 @@ module.exports = {
     requestAccess,
     seedInit,
     listRequest,
-    disableInactiveUsers
+    disableInactiveUsers,
+    downloadEvents
 };

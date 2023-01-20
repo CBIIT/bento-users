@@ -10,7 +10,7 @@ const driver = neo4j.driver(
 );
 const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
 const {LOGIN} = require("../bento-event-logging/const/event-types");
-const {executeQuery, logEvent} = require("../bento-event-logging/neo4j/neo4j-operations");
+const {executeQuery, logEvent, getRecentEvents} = require("../bento-event-logging/neo4j/neo4j-operations");
 
 //Queries
 async function createArms(arms){
@@ -652,6 +652,10 @@ async function getInactiveUsers() {
     return result[0];
 }
 
+async function getRecentEventsNeo4j(limit){
+    return await getRecentEvents(driver, limit)
+}
+
 async function wipeDatabase() {
     return await runNeo4jQuery({}, `MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n`, {})
 }
@@ -690,5 +694,6 @@ module.exports = {
     getAdmins,
     getArmsFromArmIds,
     logEventNeo4j,
-    getUserByEmailIDP
+    getUserByEmailIDP,
+    getRecentEventsNeo4j
 };
