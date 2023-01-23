@@ -1,5 +1,5 @@
 const {isCaseInsensitiveEqual} = require("../util/string-util");
-const {APPROVED} = require("../constants/access-constant");
+const {APPROVED} = require("../bento-event-logging/const/access-constant");
 
 const getApprovedArmIDs = (armAccessArray) => {
     const result = new Set();

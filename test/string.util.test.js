@@ -1,4 +1,4 @@
-const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive} = require('../util/string-util')
+const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive, parseArrToStr} = require('../util/string-util')
 
 describe('Util Test', () => {
     test('/string case insensitive equal', () => {
@@ -51,5 +51,31 @@ describe('Util Test', () => {
             const result = isElementInArrayCaseInsensitive(t.arr, t.target);
             expect(result).toBe(t.result);
         }
+    });
+
+    test('/parse array to splitted string', () => {
+        const tests = [
+            {arr: ["a", "b", "c", "d"], splitter: ",", result: "a,b,c,d"},
+            {arr: ["a", "b", "", ""], splitter: ",", result: "a,b"},
+            {arr: [null, undefined, "a", "b"], splitter: ",", result: "a,b"},
+            {arr: ['a', undefined, "b"], splitter: ",", result: "a,b"},
+            {arr: ["a"], result: "a"},
+            {arr: undefined, result: ""},
+            {arr: ["a","b,"], splitter: ",", result: "a,b,"},
+            {arr: [], splitter: ",", result: ""},
+            {arr: undefined, splitter: ",", result: ""},
+            {arr: undefined, splitter: null, result: ""},
+            {arr: null, splitter: null, result: ""},
+            {arr: ["a","b"], splitter: ":", result: "a:b"},
+            {arr: ["a","b"], splitter: " ", result: "a b"}
+        ];
+
+        for (let test of tests) {
+            const result = parseArrToStr(test.arr,test.splitter);
+            expect(result).toBe(test.result);
+        }
+
+        // No splitter
+        expect(parseArrToStr(["ab", "cd"])).toBe("ab,cd");
     });
 });

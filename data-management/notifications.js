@@ -109,5 +109,31 @@ module.exports = {
                 email
             );
         });
+    },
+    notifyAdminDisableUsers: async (email, messageVariables) => {
+        let message = replaceMessageVariables(email_constants.ADMIN_DISABLE_USER_CONTENT, messageVariables);
+        return await send(async () => {
+            await sendNotification(
+                email_constants.NOTIFICATION_SENDER,
+                email_constants.ADMIN_DISABLE_USER_SUBJECT,
+                await createEmailTemplate("notification-template.html", {
+                    message: message, ...messageVariables
+                }),
+                email
+            );
+        });
+    },
+    notifyDisabledUsers: async (email, messageVariables) => {
+        let message = replaceMessageVariables(email_constants.DISABLE_USER_CONTENT, messageVariables);
+        return await send(async () => {
+            await sendNotification(
+                email_constants.NOTIFICATION_SENDER,
+                email_constants.DISABLE_USER_SUBJECT,
+                await createEmailTemplate("notification-template.html", {
+                    message: message, ...messageVariables
+                }),
+                email
+            );
+        });
     }
 }
