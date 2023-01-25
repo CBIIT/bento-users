@@ -610,7 +610,7 @@ async function disableUsers(params) {
         RETURN COLLECT(DISTINCT {
             firstName: u.firstName,
             lastName: u.lastName,
-            role: u.email,
+            role: u.role,
             organization: u.organization,
             userEmail: u.email,
             IDP: u.IDP,

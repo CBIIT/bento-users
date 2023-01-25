@@ -33,7 +33,7 @@ const notifyAdminDisabledUsers = async (disableUsers) => {
                 firstName : admin.firstName,
                 lastName: admin.lastName,
                 "$inactiveDays": config.inactive_user_days,
-                "$disableUser": parseArrToStr([u.firstName, u.lastName, u.role, u.organization]),
+                "$disableUser": parseArrToStr([u.firstName, u.lastName, u.userEmail, u.role, u.organization], ", "),
             }
             promises.push(asyncNotify(admin.email, msg));
         }
