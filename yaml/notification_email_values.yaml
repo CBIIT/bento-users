@@ -18,6 +18,6 @@ EDIT_SUBJECT: "Bento account edited"
 EDIT_CONTENT: "Your Bento account has been edited. If further assistance is required, please contact the Bento help desk at bento-help@nih.gov"
 # Disabling users
 ADMIN_DISABLE_USER_SUBJECT: "Bento user account has been disabled"
-ADMIN_DISABLE_USER_CONTENT: "The following Bento user account, ($disableUser) has been disabled due to $inactiveDays days of inactivity"
+ADMIN_DISABLE_USER_CONTENT: "The following Bento user account, ($disableUser) has been disabled due to $inactiveDays days of inactivity."
 DISABLE_USER_SUBJECT: "Bento user account has been disabled"
-DISABLE_USER_CONTENT: "Your Bento user account has been disabled due to $inactiveDays days of inactivity. To reinstate your account please login to $systemURL and submit a Data Access Request form. Please contact bento-help@nih.gov if you have any questions"
+DISABLE_USER_CONTENT:  "Your Bento user account has been disabled due to 60 days of inactivity. To reinstate your account please contact bento-help@nih.gov"
