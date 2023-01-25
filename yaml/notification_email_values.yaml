@@ -20,4 +20,4 @@ EDIT_CONTENT: "Your Bento account has been edited. If further assistance is requ
 ADMIN_DISABLE_USER_SUBJECT: "Bento user account has been disabled"
 ADMIN_DISABLE_USER_CONTENT: "The following Bento user account, ($disableUser) has been disabled due to $inactiveDays days of inactivity."
 DISABLE_USER_SUBJECT: "Bento user account has been disabled"
-DISABLE_USER_CONTENT:  "Your Bento user account has been disabled due to 60 days of inactivity. To reinstate your account please contact bento-help@nih.gov"
+DISABLE_USER_CONTENT:  "Your Bento user account has been disabled due to $inactiveDays days of inactivity. To reinstate your account please contact bento-help@nih.gov"
