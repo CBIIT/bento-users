@@ -123,8 +123,8 @@ async function requestAccess(parameters, context) {
         try{
             let arms = await neo4j.getArmNamesFromArmIds(reqArmIDs);
             let messageVariables = {
-                "$arms": arms.join(", "),
-                "$user": `${activeUser.firstName} ${activeUser.lastName}`
+                "arms": arms.join(", "),
+                "user": `${activeUser.firstName} ${activeUser.lastName}`
             }
             await notifyTemplate(activeUser.email, activeUser.firstName, activeUser.lastName, messageVariables,
                 notifyAdminArmAccessRequest, notifyUserArmAccessRequest);
@@ -256,7 +256,7 @@ const approveAccess = async (parameters, context) => {
         }
         let armNames = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
         let messageVariables = {
-            "$arms": armNames.join(", ")
+            "arms": armNames.join(", ")
         }
         await sendApprovalNotification(currentUserState.email, messageVariables, template_params);
     }
@@ -290,7 +290,7 @@ const rejectAccess = async (parameters, context) => {
         }
         let armNames = await neo4j.getArmNamesFromArmIds(parameters.armIDs);
         let messageVariables = {
-            "$arms": armNames.join(", ")
+            "arms": armNames.join(", ")
         }
         await sendRejectionNotification(currentUserState.email, messageVariables, template_params);
     }
