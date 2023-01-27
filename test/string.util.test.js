@@ -83,9 +83,9 @@ describe('Util Test', () => {
 
     test('/replace msg variables', () => {
         let messageVariables = {
-            "$arms": 'test',
-            "$firstName": "Bento",
-            "$lastName": `lastName`
+            "arms": 'test',
+            "firstName": "Bento",
+            "lastName": `lastName`
         }
 
         let input = "This is arms $arms. Dear $firstName";
