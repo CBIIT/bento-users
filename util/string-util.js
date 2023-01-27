@@ -28,11 +28,19 @@ const isUndefined = (p) => {
     return p === undefined;
 }
 
+const replaceMessageVariables = (input, messageVariables) => {
+    for (let key in messageVariables){
+        input = input.replace(key, messageVariables[key]);
+    }
+    return input;
+}
+
 module.exports = {
     isCaseInsensitiveEqual,
     isElementInArray,
     isElementInArrayCaseInsensitive,
     isUndefined,
     getUniqueArr,
-    parseArrToStr
+    parseArrToStr,
+    replaceMessageVariables
 }

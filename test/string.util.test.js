@@ -1,4 +1,6 @@
-const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive, parseArrToStr} = require('../util/string-util')
+const {isCaseInsensitiveEqual, isElementInArray, isElementInArrayCaseInsensitive, parseArrToStr,
+    replaceMessageVariables
+} = require('../util/string-util')
 
 describe('Util Test', () => {
     test('/string case insensitive equal', () => {
@@ -78,4 +80,18 @@ describe('Util Test', () => {
         // No splitter
         expect(parseArrToStr(["ab", "cd"])).toBe("ab,cd");
     });
+
+    test('/replace msg variables', () => {
+        let messageVariables = {
+            "$arms": 'test',
+            "$firstName": "Bento",
+            "$lastName": `lastName`
+        }
+
+        let input = "This is arms $arms. Dear $firstName";
+
+        const result = replaceMessageVariables(input, messageVariables);
+        expect(result).toBe('This is arms test. Dear Bento');
+    })
+
 });
