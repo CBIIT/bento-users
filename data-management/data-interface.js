@@ -18,7 +18,7 @@ const idpCondition = require("../model/valid-conditions/idp-condition");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../bento-event-logging/const/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
-const {logRequestArmAccess, logRegisterUser, logReview, logEditUser} = require("./event-logging");
+const {logRequestArmAccess, logRegisterUser, logReview, logEditUser, logDisableUser} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
 const moment = require("moment");
@@ -459,6 +459,8 @@ const disableInactiveUsers = async () => {
             const disabledAdmins = await neo4j.disableAdminRole({ids: disableAdminIDs}, MEMBER);
             if (!disabledAdmins || disabledAdmins.length === 0) console.error("Disabling the admin role failed");
         }
+        // store disabled users logs
+        await logDisableUser(disableUsers);
     }
     return disableUsers;
 }
