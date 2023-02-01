@@ -5,7 +5,7 @@ const {sendAdminNotification, sendRegistrationConfirmation, sendApprovalNotifica
     sendEditNotification, notifyUserArmAccessRequest, notifyAdminArmAccessRequest
 } = require("./notifications");
 const {NONE, NON_MEMBER, ADMIN, MEMBER, ACTIVE, INACTIVE} = require("../bento-event-logging/const/user-constant");
-const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive} = require("../util/string-util");
+const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive, isElementInArray} = require("../util/string-util");
 const config = require('../config');
 const ArmAccess = require("../model/arm-access");
 const {notifyTemplate} = require("../services/notify");
@@ -18,7 +18,7 @@ const idpCondition = require("../model/valid-conditions/idp-condition");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../bento-event-logging/const/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
-const {logRequestArmAccess, logRegisterUser, logReview, logEditUser, logDisableUser} = require("./event-logging");
+const {logRequestArmAccess, logRegisterUser, logReview, logEditUser, logDisableUser, logEditUserByApp} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
 const moment = require("moment");
@@ -453,14 +453,20 @@ const disableInactiveUsers = async () => {
         }
         // Email Notification
         await(disableNotification(disabledUsers));
+        // store disabled users logs
+        await logDisableUser(disableUsers);
         // Disable admin status
         const disableAdminIDs = disableUsers.filter((u)=> isCaseInsensitiveEqual(u.role, ADMIN)).map((u) => (u.userID));
         if (disableAdminIDs.length > 0) {
             const disabledAdmins = await neo4j.disableAdminRole({ids: disableAdminIDs}, MEMBER);
             if (!disabledAdmins || disabledAdmins.length === 0) console.error("Disabling the admin role failed");
         }
-        // store disabled users logs
-        await logDisableUser(disableUsers);
+        // store disabled admin event
+        for (const u of disableUsers) {
+            if (isElementInArray(disableAdminIDs, u.userID)) {
+                await logEditUserByApp("role", ADMIN, MEMBER, u.userID, u.userEmail,u.IDP);
+            }
+        }
     }
     return disableUsers;
 }

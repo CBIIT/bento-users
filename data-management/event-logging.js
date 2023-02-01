@@ -37,8 +37,13 @@ const logReview = async (newStatus, armIDs, requesterEmail, requesterIDP, review
 
 const logEditUser = async (updatedField, oldValue, newValue, actingUserID, actingUserEmail, actingUserIDP,
                            updatedUserID, updatedUserEmail, updatedUserIDP) => {
-    const updateEvent = new UpdateEvent(updatedField, oldValue, newValue, actingUserID, actingUserEmail, actingUserIDP,
+    const updateEvent = UpdateEvent.updateUserEvent(updatedField, oldValue, newValue, actingUserID, actingUserEmail, actingUserIDP,
         updatedUserID, updatedUserEmail, updatedUserIDP);
+    await logEventNeo4j(updateEvent);
+};
+
+const logEditUserByApp = async (updatedField, oldValue, newValue, actingUserID, actingUserEmail, actingUserIDP) => {
+    const updateEvent = UpdateEvent.updateUserEventByApp(updatedField, oldValue, newValue, actingUserID, actingUserEmail, actingUserIDP);
     await logEventNeo4j(updateEvent);
 };
 
@@ -53,5 +58,6 @@ module.exports = {
     logRegisterUser,
     logReview,
     logEditUser,
-    logDisableUser
+    logDisableUser,
+    logEditUserByApp
 }
