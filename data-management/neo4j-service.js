@@ -645,6 +645,7 @@ async function getInactiveUsers() {
             userEmail: u.email,
             IDP: u.IDP,
             role: u.role,
+            userStatus: u.userStatus,
             organization: u.organization
         }) as user
         `

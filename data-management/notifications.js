@@ -2,6 +2,7 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const {sendNotification} = require("../services/notify");
 const {createEmailTemplate} = require("../lib/create-email-template");
+const {replaceMessageVariables} = require("../util/string-util");
 
 let email_constants = undefined
 try {
@@ -30,13 +31,6 @@ async function sendReviewNotification(email, template_params, subject, message, 
             email
         );
     });
-}
-
-function replaceMessageVariables(input, messageVariables){
-    for (let key in messageVariables){
-        input = input = input.replace(key, messageVariables[key]);
-    }
-    return input;
 }
 
 module.exports = {
