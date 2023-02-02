@@ -41,9 +41,16 @@ const logEditUser = async (updatedField, oldValue, newValue, actingUserID, actin
     await logEventNeo4j(updateEvent);
 };
 
+const logDisableUser = async (users) => {
+    for (const u of users) {
+        await logEventNeo4j(new UpdateEvent(u.userID, u.userEmail, u.IDP));
+    }
+};
+
 module.exports = {
     logRequestArmAccess,
     logRegisterUser,
     logReview,
-    logEditUser
+    logEditUser,
+    logDisableUser
 }
