@@ -4,6 +4,7 @@ const {ReviewEvent} = require("../bento-event-logging/model/review-event");
 const {UpdateEvent} = require("../bento-event-logging/model/update-event");
 const {getArmsFromArmIds, logEventNeo4j, getUserByEmailIDP} = require("./neo4j-service");
 const {PENDING, APPROVED, REVOKED} = require("../bento-event-logging/const/access-constant");
+const {NOT_APPLICABLE, DISABLED} = require("../bento-event-logging/const/user-constant");
 
 
 const logRequestArmAccess = async (armIDs, userID, userEmail, userIDP) => {
@@ -43,7 +44,7 @@ const logEditUser = async (updatedField, oldValue, newValue, actingUserID, actin
 
 const logDisableUser = async (users) => {
     for (const u of users) {
-        await logEventNeo4j(new UpdateEvent(u.userID, u.userEmail, u.IDP));
+        await logEventNeo4j(new UpdateEvent('userStatus', u.userStatus, DISABLED, NOT_APPLICABLE, NOT_APPLICABLE, NOT_APPLICABLE, u.userID, u.userEmail, u.IDP));
     }
 };
 
