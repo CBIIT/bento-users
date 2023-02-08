@@ -13,7 +13,7 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const fsp = fs.promises;
 const LoginCondition = require("../model/valid-conditions/login-condition");
-const {ArmRequestParamsCondition, ArmExistCondition} = require("../model/valid-conditions/arm-conditions");
+const {ArmRequestParamsCondition, ArmExistCondition, ArmReqUserStatusCondition} = require("../model/valid-conditions/arm-conditions");
 const idpCondition = require("../model/valid-conditions/idp-condition");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../bento-event-logging/const/access-constant");
@@ -102,7 +102,8 @@ async function requestAccess(parameters, context) {
     // Validate login and parameters
     isValidOrThrow([
         new LoginCondition(activeUser.email, activeUser.IDP),
-        new ArmRequestParamsCondition(parameters.userInfo.armIDs)
+        new ArmRequestParamsCondition(parameters.userInfo.armIDs),
+        new ArmReqUserStatusCondition(activeUser.userStatus)
     ]);
     // Get unique list of arm ids
     const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);

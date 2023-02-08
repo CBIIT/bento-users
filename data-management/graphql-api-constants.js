@@ -20,6 +20,7 @@ exports.errorName = {
     UNABLE_TO_REQUEST_ARM_ACCESS: 'UNABLE_TO_REQUEST_ARM_ACCESS',
     INVALID_REQUEST_ARM: 'INVALID_REQUEST_ARM',
     MISSING_ARM_REQUEST_INPUTS: 'MISSING_ARM_REQUEST_INPUTS',
+    DISABLED_USER_ARM_REQUEST: 'DISABLED_USER_ARM_REQUEST',
     NOT_GENERAL_USER: 'NON_GENERAL_USER',
     INVALID_ADMIN_ARM_REQUEST: 'INVALID_ADMIN_ARM_REQUEST',
 };
@@ -40,6 +41,10 @@ exports.errorType = {
     MISSING_ARM_REQUEST_INPUTS: {
         message: `Arm id(s) is required input for arm request access`,
         statusCode: 400
+    },
+    DISABLED_USER_ARM_REQUEST: {
+        message: `Request failed, disabled users are not allowed to submit data access requests`,
+        statusCode: 409
     },
     INVALID_IDP: {
         message: "Invalid IDP, the valid IDPs are the following: " + valid_idps.join(", "),
