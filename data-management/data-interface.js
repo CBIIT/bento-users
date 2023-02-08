@@ -102,8 +102,8 @@ async function requestAccess(parameters, context) {
     // Validate login and parameters
     isValidOrThrow([
         new LoginCondition(activeUser.email, activeUser.IDP),
-        new ArmRequestParamsCondition(parameters.userInfo.armIDs),
-        new ArmReqUserStatusCondition(activeUser.userStatus)
+        new ArmReqUserStatusCondition(activeUser.userStatus),
+        new ArmRequestParamsCondition(parameters.userInfo.armIDs)
     ]);
     // Get unique list of arm ids
     const reqArmIDs = getUniqueArr(parameters.userInfo.armIDs);
