@@ -1,4 +1,6 @@
 const {errorName} = require("../../data-management/graphql-api-constants");
+const {DISABLED} = require("../../bento-event-logging/const/user-constant");
+const {user_statuses} = require("../../bento-event-logging/const/format-constants");
 class ArmExistCondition {
     // Request arms are examined with arms in db
     constructor(arms, reqArmIDs) {
@@ -30,7 +32,24 @@ class ArmRequestParamsCondition {
 
 }
 
+class ArmReqUserStatusCondition {
+    constructor(userStatus) {
+        this.statusesSet = new Set(user_statuses);
+        this.status = userStatus;
+    }
+
+    isValid() {
+        return this.statusesSet.has(this.status) && this.status !== DISABLED;
+    }
+
+    throwError() {
+        throw new Error(errorName.DISABLED_USER_ARM_REQUEST);
+    }
+
+}
+
 module.exports = {
     ArmRequestParamsCondition,
-    ArmExistCondition
+    ArmExistCondition,
+    ArmReqUserStatusCondition
 }
