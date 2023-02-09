@@ -632,7 +632,8 @@ async function getInactiveUsers() {
         WITH COLLECT(DISTINCT e.user_id) AS activeUsers
         MATCH (u:User)
         WHERE
-            NOT u.userStatus = '${DISABLED}'
+            NOT u.userStatus = '${DISABLED}' AND
+            NOT u.role = '${NON_MEMBER}'
         WITH COLLECT(DISTINCT u.userID) AS enabledUsers, activeUsers
         MATCH (u:User)
         WHERE
