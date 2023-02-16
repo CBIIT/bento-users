@@ -1,9 +1,7 @@
 const {buildSchema} = require('graphql');
 const data_interface = require('./data-interface');
-const {graphqlHTTP} = require("express-graphql");
-const {errorType} = require('./graphql-api-constants');
 const {formatVariables, formatMap} = require("../bento-event-logging/const/format-constants");
-const {formatErrorResponse} = require("../util/error-util");
+const {createHandler} = require("graphql-http/lib/use/express");
 
 //Read schema from schema.graphql file
 const schema = buildSchema(require("fs").readFileSync("graphql/schema.graphql", "utf8"));
@@ -28,16 +26,12 @@ const root = {
     // disableUser: data_interface.disableUser,
 };
 
-module.exports = graphqlHTTP((req, res) => {
+module.exports = (req, res) => {
     req.body.variables = formatVariables(req.body.variables, ["role", "userStatus", "accessStatus"], formatMap);
     req.session.userInfo = formatVariables(req.session.userInfo, ["IDP"], formatMap);
-    return {
-        graphiql: true,
+    createHandler({
         schema: schema,
         rootValue: root,
-        context: req.session,
-        customFormatErrorFn: (error) => {
-            return formatErrorResponse(res, error);
-        }
-    }
-});
+        context: req.session
+    })(req,res);
+}
