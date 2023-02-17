@@ -55,12 +55,7 @@ app.use(cors());
 app.use(logger('combined', { stream: accessLogStream }))
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(createSession({ sessionSecret: config.cookie_secret, session_timeout: config.session_timeout }));
-
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/api/users/graphql', graphql);
-app.use('/api/users', events_router);
 
 /* GET ping-ping for health checking. */
 app.get('/api/users/ping', function (req, res, next) {
@@ -73,6 +68,10 @@ app.get('/api/users/version', function (req, res, next) {
         version: config.version, date: config.date
     });
 });
+
+app.use(createSession({ sessionSecret: config.cookie_secret, session_timeout: config.session_timeout }));
+app.use('/api/users/graphql', graphql);
+app.use('/api/users', events_router);
 
 // Scheduled cronjob twice a day (5am, 8pm) eastern time
 cronJob.schedule("1 0 1,10 * * *", async () => {
