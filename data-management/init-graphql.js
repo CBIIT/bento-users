@@ -2,7 +2,8 @@ const {buildSchema} = require('graphql');
 const data_interface = require('./data-interface');
 const {graphqlHTTP} = require("express-graphql");
 const {errorType} = require('./graphql-api-constants');
-
+const {formatVariables, formatMap} = require("../bento-event-logging/const/format-constants");
+const {formatErrorResponse} = require("../util/error-util");
 
 //Read schema from schema.graphql file
 const schema = buildSchema(require("fs").readFileSync("graphql/schema.graphql", "utf8"));
@@ -27,28 +28,16 @@ const root = {
     // disableUser: data_interface.disableUser,
 };
 
-
-
 module.exports = graphqlHTTP((req, res) => {
+    req.body.variables = formatVariables(req.body.variables, ["role", "userStatus", "accessStatus"], formatMap);
+    req.session.userInfo = formatVariables(req.session.userInfo, ["IDP"], formatMap);
     return {
         graphiql: true,
         schema: schema,
         rootValue: root,
-        context: {
-            userInfo: req.session.userInfo
-        },
+        context: req.session,
         customFormatErrorFn: (error) => {
-            let status = undefined;
-            let body = {error: undefined};
-            try {
-                status = errorType[error.message].statusCode;
-                body.error = errorType[error.message].message;
-            } catch (err) {
-                status = 500;
-                body.error = "Internal server error: "+error;
-            }
-            res.status(status);
-            return body;
+            return formatErrorResponse(res, error);
         }
     }
 });

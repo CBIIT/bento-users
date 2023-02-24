@@ -1,5 +1,5 @@
 const GeneralUserCondition = require("../../model/valid-conditions/general-user-condition");
-const {ADMIN, MEMBER} = require("../../constants/user-constant");
+const {ADMIN, MEMBER} = require("../../bento-event-logging/const/user-constant");
 
 describe('general user condition', () => {
     test('/create general', ()=> {

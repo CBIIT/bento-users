@@ -1,4 +1,4 @@
-const {APPROVED, PENDING} = require("../constants/access-constant");
+const {APPROVED, PENDING} = require("../bento-event-logging/const/access-constant");
 const {v4} = require('uuid')
 const Arm = require("./arm");
 class ArmAccess {

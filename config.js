@@ -5,7 +5,7 @@ const config = {
   version: process.env.VERSION,
   date: process.env.DATE,
   emails_enabled: process.env.EMAILS_ENABLED ? process.env.EMAILS_ENABLED.toLowerCase() === 'true' : true,
-
+  inactive_user_days : process.env.INACTIVE_USER_DAYS ? process.env.INACTIVE_USER_DAYS : 60,
   cookie_secret: process.env.COOKIE_SECRET,
   session_timeout: process.env.SESSION_TIMEOUT ? parseInt(process.env.SESSION_TIMEOUT) * 1000 : 1000 * 30 * 60,  // 30 minutes
 
@@ -28,6 +28,11 @@ const config = {
 
   //Seed data for initialization
   seed_data_file: process.env.SEED_DATA_FILE,
+  server_host: process.env.SERVER_HOST ? process.env.SERVER_HOST : "https://www.bento-tools.org",
+
+  //Events Download Endpoint
+  //One million events is roughly estimated to generate a file about 235 MB in size
+  event_download_limit: process.env.EVENT_DOWNLOAD_LIMIT ? Math.MIN(parseInt(process.env.EVENT_DOWNLOAD_LIMIT), 1000000) : 1000000
 };
 
 function getTransportConfig() {

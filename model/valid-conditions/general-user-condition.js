@@ -1,11 +1,11 @@
-const {MEMBER, NON_MEMBER} = require("../../constants/user-constant");
+const {MEMBER, NON_MEMBER} = require("../../bento-event-logging/const/user-constant");
 const {isCaseInsensitiveEqual} = require("../../util/string-util");
 const {errorName} = require("../../data-management/graphql-api-constants");
 const InputCondition = require("./input-condition");
 class GeneralUserCondition extends InputCondition {
-    constructor(userInfo) {
-        super(userInfo);
-        this._role = userInfo.role;
+    constructor(email, idp, role) {
+        super(email, idp);
+        this._role = role;
     }
 
     isValid() {

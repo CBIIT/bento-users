@@ -1,7 +1,9 @@
 const {errorName} = require("../../data-management/graphql-api-constants");
 class InputCondition {
-    constructor(userInfo) {
-        if (!userInfo || !userInfo.email || !userInfo.idp) throw new Error(errorName.MISSING_INPUTS);
+    constructor(email, idp) {
+        this._email = email;
+        this._idp = idp;
+        if (!email || !idp) throw new Error(errorName.MISSING_INPUTS);
     }
 }
 

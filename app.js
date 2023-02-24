@@ -1,4 +1,3 @@
-const newrelic = require('newrelic');
 const graphql = require("./data-management/init-graphql");
 const createError = require('http-errors');
 const express = require('express');
@@ -8,6 +7,10 @@ const fs = require('fs');
 const cors = require('cors');
 const config = require('./config');
 const {createSession} = require("./services/session");
+const cronJob = require("node-cron");
+const {disableInactiveUsers} = require("./data-management/data-interface");
+const {getTimeNow} = require("./util/time-util");
+const events_router = require("./data-management/events-router");
 
 //Print configuration
 console.log(config);
@@ -57,6 +60,7 @@ app.use(createSession({ sessionSecret: config.cookie_secret, session_timeout: co
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/users/graphql', graphql);
+app.use('/api/users', events_router);
 
 /* GET ping-ping for health checking. */
 app.get('/api/users/ping', function (req, res, next) {
@@ -68,6 +72,12 @@ app.get('/api/users/version', function (req, res, next) {
     res.json({
         version: config.version, date: config.date
     });
+});
+
+// Scheduled cronjob twice a day (5am, 8pm) eastern time
+cronJob.schedule("1 0 1,10 * * *", async () => {
+    console.log("Running a scheduled background task to disable inactive users at " + getTimeNow());
+    await disableInactiveUsers();
 });
 
 // catch 404 and forward to error handler

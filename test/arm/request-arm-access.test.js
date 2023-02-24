@@ -4,8 +4,9 @@ const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessServic
 } = require("../../data-management/neo4j-service");
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
-const {PENDING} = require("../../constants/access-constant");
-const {ADMIN} = require("../../constants/user-constant");
+const {PENDING} = require("../../bento-event-logging/const/access-constant");
+const {ADMIN, DISABLED, ACTIVE} = require("../../bento-event-logging/const/user-constant");
+const {ArmReqUserStatusCondition} = require("../../model/valid-conditions/arm-conditions");
 // Create Data management mock
 jest.mock("../../data-management/neo4j-service");
 // Create email notification mock object
@@ -153,4 +154,19 @@ describe('arm access Test', () => {
         expect(notifyAdminArmAccessRequest).toBeCalledTimes(0);
     });
 
+    // throw invalid arm access
+    test('/disable user arm request', async () => {
+        const tests = [
+            {status: DISABLED, expected: false},
+            {status: null, expected: false},
+            {status: undefined, expected: false},
+            {status: ACTIVE, expected: true},
+            {status: "RANDOM", expected: false}
+        ];
+
+        tests.forEach(t=> {
+            const status = new ArmReqUserStatusCondition(t.status);
+            expect(status.isValid()).toBe(t.expected);
+        });
+    });
 });
