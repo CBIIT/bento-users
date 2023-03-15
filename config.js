@@ -8,6 +8,8 @@ const config = {
   inactive_user_days : process.env.INACTIVE_USER_DAYS ? process.env.INACTIVE_USER_DAYS : 60,
   cookie_secret: process.env.COOKIE_SECRET,
   session_timeout: process.env.SESSION_TIMEOUT ? parseInt(process.env.SESSION_TIMEOUT) * 1000 : 1000 * 30 * 60,  // 30 minutes
+  token_secret: process.env.TOKEN_SECRET,
+  token_timeout: process.env.TOKEN_TIMEOUT ? parseInt(process.env.TOKEN_TIMEOUT) : 30 * 60, // 30 minutes
 
   //Neo4j connection
   NEO4J_URI: process.env.NEO4J_URI,

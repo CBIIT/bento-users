@@ -23,6 +23,8 @@ const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
 const moment = require("moment");
 const path = require("path");
+const {verifyToken, decodeToken, getAccessToken} = require("../services/tokenizer");
+const TokenCondition = require("../model/valid-conditions/token-condition");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -50,9 +52,10 @@ const isValidOrThrow = (conditions) => {
 }
 
 const getMyUser = async (_, context) => {
-    let loginInfo = context.userInfo;
+    const accessToken = getAccessToken(context.req.headers);
+    let loginInfo = verifyToken(accessToken) ? decodeToken(accessToken) : context.userInfo;
     isValidOrThrow([
-        new LoginCondition(loginInfo.email, loginInfo.IDP)
+        (accessToken) ? new TokenCondition(accessToken) : new LoginCondition(loginInfo.email, loginInfo.IDP)
     ]);
     let activeUser = await neo4j.getMyUser(loginInfo);
     // store user if not exists in db
@@ -98,10 +101,11 @@ const listArms = async (input, context) => {
 }
 
 async function requestAccess(parameters, context) {
-    let activeUser = context.userInfo;
+    const accessToken = getAccessToken(context.req.headers);
+    let activeUser = verifyToken(accessToken) ? decodeToken(accessToken) : context.userInfo;
     // Validate login and parameters
     isValidOrThrow([
-        new LoginCondition(activeUser.email, activeUser.IDP),
+        (accessToken) ? new TokenCondition(accessToken) : new LoginCondition(activeUser.email, activeUser.IDP),
         new ArmReqUserStatusCondition(activeUser.userStatus),
         new ArmRequestParamsCondition(parameters.userInfo.armIDs)
     ]);
@@ -381,9 +385,10 @@ const editUser = async (parameters, context) => {
 }
 
 const updateMyUser = async (parameters, context) => {
-    let activeUser = context.userInfo;
+    const accessToken = getAccessToken(context.req.headers);
+    let activeUser = verifyToken(accessToken) ? decodeToken(accessToken) : context.userInfo;
     isValidOrThrow([
-        new LoginCondition(activeUser.email, activeUser.IDP)
+        (accessToken) ? new TokenCondition(accessToken) : new LoginCondition(activeUser.email, activeUser.IDP)
     ]);
     const initialUserState = activeUser;
     const currentUserState = await neo4j.updateMyUser(parameters.userInfo, context.userInfo);
