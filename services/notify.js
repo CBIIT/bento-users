@@ -1,73 +1,80 @@
 const { createTransport } = require('nodemailer');
 const config = require('../config');
-const {getAdminEmails} = require("../data-management/neo4j-service");
 
-async function sendNotification(from, subject, html, to = [], cc = [], bcc = []) {
+class NotifyService {
 
-    if (!to?.length) {
-        throw new Error('Missing recipient');
+    constructor(dataService) {
+        this.dataService = dataService;
     }
 
-    if (!html) {
-        throw new Error('Missing HTML CONTENTS');
-    }
+    async sendNotification(from, subject, html, to = [], cc = [], bcc = []) {
 
-    to = asArray(to);
-    cc = asArray(cc);
-    bcc = asArray(bcc);
-
-    return await sendMail({ from, to, cc, bcc, subject, html });
-}
-
-async function sendMail(params) {
-    const transport = createTransport(config.email_transport);
-    console.log("Generating email to: "+params.to.join(', '));
-    if (config.emails_enabled){
-        try{
-            let result = await transport.sendMail(params);
-            console.log("Email sent");
-            return result;
+        if (!to?.length) {
+            throw new Error('Missing recipient');
         }
-        catch (err){
-            console.error("Email failed to send with ths following reason:" + err.message);
-            return err;
+
+        if (!html) {
+            throw new Error('Missing HTML CONTENTS');
         }
-    }
-    else {
-        console.log("Email not sent, email is disabled by configuration");
-        return true;
-    }
-}
 
-function asArray(values = []) {
-    return Array.isArray(values)
-        ? values
-        : [values];
-}
+        to = this.asArray(to);
+        cc = this.asArray(cc);
+        bcc = this.asArray(bcc);
 
-const notifyTemplate = async (email, firstName, lastName, messageVariables, sendAdmin, sendUser) => {
-    // send admin notification
-    const notifyAdmin = async () => {
-        if (sendAdmin) {
-            const adminEmails = await getAdminEmails();
-            if (adminEmails && adminEmails.length > 0) {
-                await sendAdmin(adminEmails, messageVariables);
+        return await this.sendMail({ from, to, cc, bcc, subject, html });
+    }
+
+    async sendMail(params) {
+        const transport = createTransport(config.email_transport);
+        console.log("Generating email to: "+params.to.join(', '));
+        if (config.emails_enabled){
+            try{
+                let result = await transport.sendMail(params);
+                console.log("Email sent");
+                return result;
             }
-            else {
-                console.error("No admins found, please verify that at least one administrator user exists");
+            catch (err){
+                console.error("Email failed to send with ths following reason:" + err.message);
+                return err;
             }
         }
-    }
-
-    const notifyUser = async () => {
-        if (sendUser)  {
-            await sendUser(email, messageVariables, {
-                firstName: firstName,
-                lastName: lastName
-            })
+        else {
+            console.log("Email not sent, email is disabled by configuration");
+            return true;
         }
     }
-    await Promise.all([notifyAdmin(), notifyUser()])
+
+    asArray(values = []) {
+        return Array.isArray(values)
+            ? values
+            : [values];
+    }
+
+    async notifyTemplate(email, firstName, lastName, messageVariables, sendAdmin, sendUser){
+        // send admin notification
+        const notifyAdmin = async () => {
+            if (sendAdmin) {
+                const adminEmails = await this.dataService.getAdminEmails();
+                if (adminEmails && adminEmails.length > 0) {
+                    await sendAdmin(adminEmails, messageVariables);
+                }
+                else {
+                    console.error("No admins found, please verify that at least one administrator user exists");
+                }
+            }
+        }
+
+        const notifyUser = async () => {
+            if (sendUser)  {
+                await sendUser(email, messageVariables, {
+                    firstName: firstName,
+                    lastName: lastName
+                })
+            }
+        }
+        await Promise.all([notifyAdmin(), notifyUser()])
+    }
+
 }
 
-module.exports = { sendNotification, notifyTemplate }
+module.exports = {NotifyService}
