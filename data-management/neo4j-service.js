@@ -480,6 +480,31 @@ async function editUser(parameters) {
     return result[0];
 }
 
+async function linkTokenToUser(parameters, userInfo) {
+    const cypher =
+        `
+        MATCH (user:User)
+        WHERE
+            user.email = '${userInfo.email}' AND user.IDP = '${userInfo.IDP}'
+        MERGE (user)<-[:of_token]-(token:Token {uuid: $uuid,expiration: $expiration })
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
+        WITH user, COLLECT(DISTINCT token {
+            uuid: $uuid, expiration: $expiration
+        }) as token
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            userID: user.userID,
+            IDP: user.IDP,
+            tokens: token
+        } AS user
+        `;
+    const result = await runNeo4jQuery(parameters, cypher, 'user');
+    return result[0];
+}
+
 async function updateMyUser(parameters, userInfo) {
     const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(isUndefined(p)));
     const cypher =
@@ -697,5 +722,6 @@ module.exports = {
     getArmsFromArmIds,
     logEventNeo4j,
     getUserByEmailIDP,
-    getRecentEventsNeo4j
+    getRecentEventsNeo4j,
+    linkTokenToUser
 };
