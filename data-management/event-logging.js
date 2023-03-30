@@ -5,6 +5,8 @@ const {UpdateEvent} = require("../bento-event-logging/model/update-event");
 const {getArmsFromArmIds, logEventNeo4j, getUserByEmailIDP} = require("./neo4j-service");
 const {PENDING, APPROVED, REVOKED} = require("../bento-event-logging/const/access-constant");
 const {NOT_APPLICABLE, DISABLED} = require("../bento-event-logging/const/user-constant");
+const {TokenCreateEvent} = require("../bento-event-logging/model/token-create-event");
+const {TokenInvalidatedEvent} = require("../bento-event-logging/model/token-invalidated-event");
 
 
 const logRequestArmAccess = async (armIDs, userID, userEmail, userIDP) => {
@@ -48,10 +50,22 @@ const logDisableUser = async (users) => {
     }
 };
 
+const logCreateToken = async (user, token) => {
+    const createTokenEnt = new TokenCreateEvent(user, token);
+    await logEventNeo4j(createTokenEnt);
+}
+
+const logInvalidatedToken = async (user, token) => {
+    const createTokenEnt = new TokenInvalidatedEvent(user, token);
+    await logEventNeo4j(createTokenEnt);
+}
+
 module.exports = {
     logRequestArmAccess,
     logRegisterUser,
     logReview,
     logEditUser,
-    logDisableUser
+    logDisableUser,
+    logCreateToken,
+    logInvalidatedToken
 }

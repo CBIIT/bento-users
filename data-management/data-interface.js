@@ -18,12 +18,14 @@ const idpCondition = require("../model/valid-conditions/idp-condition");
 const GeneralUserCondition = require("../model/valid-conditions/general-user-condition");
 const {PENDING, REJECTED, REVOKED, APPROVED} = require("../bento-event-logging/const/access-constant");
 const {getApprovedArmIDs} = require("../services/arm-access");
-const {logRequestArmAccess, logRegisterUser, logReview, logEditUser, logDisableUser} = require("./event-logging");
+const {logRequestArmAccess, logRegisterUser, logReview, logEditUser, logDisableUser, logCreateToken} = require("./event-logging");
 const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
 const moment = require("moment");
 const path = require("path");
 const {createToken} = require("../services/tokenizer");
+const User = require("../bento-event-logging/model/User");
+const Token = require("../bento-event-logging/model/Token");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -57,8 +59,8 @@ const grantToken = async (_, context) => {
     ]);
     const uuid = v4();
     const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
-    await neo4j.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
-    // TODO log token creation
+    const aUser = await neo4j.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
+    if (aUser) await logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), new Token(uuid, config.token_timeout));
     return {
         token: accessToken,
         message: 'This token can only be viewed once and will be lost if it is not saved by the user'
