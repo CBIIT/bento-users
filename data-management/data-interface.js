@@ -23,6 +23,7 @@ const {disableNotification} = require("../services/notify-user");
 const {user_statuses, user_roles} = require("../bento-event-logging/const/format-constants");
 const moment = require("moment");
 const path = require("path");
+const {createToken} = require("../services/tokenizer");
 
 async function checkUnique(email, IDP){
     return await neo4j.checkUnique(IDP+":"+email);
@@ -47,6 +48,21 @@ const isValidOrThrow = (conditions) => {
     conditions.forEach((condition)=> {
         if (!condition.isValid()) condition.throwError();
     });
+}
+
+const grantToken = async (_, context) => {
+    const userInfo = context.userInfo;
+    isValidOrThrow([
+        new LoginCondition(userInfo.email, userInfo.IDP)
+    ]);
+    const uuid = v4();
+    const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
+    await neo4j.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
+    // TODO log token creation
+    return {
+        token: accessToken,
+        message: 'This token can only be viewed once and will be lost if it is not saved by the user'
+    }
 }
 
 const getMyUser = async (_, context) => {
@@ -524,5 +540,6 @@ module.exports = {
     seedInit,
     listRequest,
     disableInactiveUsers,
-    downloadEvents
+    downloadEvents,
+    grantToken
 };

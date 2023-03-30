@@ -89,6 +89,11 @@ type UserRequest {
     acl: [Access]
 }
 
+type Token {
+    token: String
+    message: String
+}
+
 type Query {
     "Admin only"
     listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [UserInfo]
@@ -96,7 +101,7 @@ type Query {
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
-
+    grantToken: Token
     "Open to any authenticated users"
     listArms: [Arm]
 }
