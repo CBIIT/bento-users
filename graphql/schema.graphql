@@ -102,6 +102,7 @@ type Query {
     "Limit to current user only"
     getMyUser : User
     grantToken: Token
+
     "Open to any authenticated users"
     listArms: [Arm]
 }
