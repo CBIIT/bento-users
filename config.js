@@ -11,6 +11,7 @@ const config = {
   session_timeout: process.env.SESSION_TIMEOUT ? parseInt(process.env.SESSION_TIMEOUT) * 1000 : 1000 * 30 * 60,  // 30 minutes
   token_secret: process.env.TOKEN_SECRET,
   token_timeout: timerLessThanInactiveDays(this.inactive_user_days, parseInt(process.env.TOKEN_TIMEOUT)),
+
   //Neo4j connection
   NEO4J_URI: process.env.NEO4J_URI,
   NEO4J_USER: process.env.NEO4J_USER,
