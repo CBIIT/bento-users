@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const {isElementInArrayCaseInsensitive} = require("../util/string-util");
 const verifyToken = (token , tokenSecret) => {
     let isValid = false;
     jwt.verify(token, tokenSecret, (error, _) => {
@@ -37,10 +38,20 @@ const timerLessThanInactiveDays = (inactiveDays, tokenTimeout) => {
     return Math.min(inactiveUserTimeout, timeout);
 }
 
+// token validation rule:
+// 1. a verified token with token secret
+// 2. The uuid from token's decoded info match with stored uuid in the database
+const authenticateUserToken = (token, tokenSecret, UUIDArray) => {
+    const isValidToken = verifyToken(token, tokenSecret);
+    const userInfo = isValidToken ? decodeToken(token, tokenSecret) : {};
+    return (userInfo) && isElementInArrayCaseInsensitive(UUIDArray, userInfo.uuid);
+}
+
 module.exports = {
     timerLessThanInactiveDays,
     decodeToken,
     verifyToken,
     getAccessToken,
-    createToken
+    createToken,
+    authenticateUserToken
 };
