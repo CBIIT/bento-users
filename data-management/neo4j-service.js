@@ -23,7 +23,7 @@ class Neo4jService {
             SET arm.acronym = $acronym
             RETURN arm
         `
-            let result = await runNeo4jQuery(arm, cypher, 'arm');
+            let result = await this.runNeo4jQuery(arm, cypher, 'arm');
             if (!result[0]) {
                 throw new Error("Failed to initialize arm with the following data: " + arm);
             }
@@ -40,7 +40,7 @@ class Neo4jService {
         WHERE a.accessStatus IN $accessStatuses
         RETURN COLLECT(DISTINCT arm.id) AS result
     `
-        const result = await runNeo4jQuery(parameters, cypher, 'result');
+        const result = await this.runNeo4jQuery(parameters, cypher, 'result');
         return result[0];
     }
 
