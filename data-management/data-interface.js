@@ -21,6 +21,9 @@ const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive, is
 const {getApprovedArmIDs} = require("../services/arm-access");
 const ArmAccess = require("../model/arm-access");
 const {createToken} = require("../services/tokenizer");
+//model
+const User = require("../bento-event-logging/model/User");
+const Token = require("../bento-event-logging/model/Token");
 //services
 const {NotificationsService} = require("./notifications");
 const {EventLoggingService} = require("./event-logging");
@@ -498,8 +501,8 @@ class DataInterface {
         ]);
         const uuid = v4();
         const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
-        await this.dataService.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
-        // TODO log token creation
+        const aUser = await this.dataService.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
+        if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), new Token(uuid, config.token_timeout));
         return {
             token: accessToken,
             message: 'This token can only be viewed once and will be lost if it is not saved by the user'
