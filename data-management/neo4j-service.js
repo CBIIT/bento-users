@@ -670,7 +670,7 @@ class Neo4jService {
         MATCH (user:User)
         WHERE
             user.email = '${userInfo.email}' AND user.IDP = '${userInfo.IDP}'
-        MERGE (user)<-[:of_token]-(token:Token {uuid: $uuid})
+        MERGE (user)<-[:of_token]-(token:Token {uuid: $uuid,expiration: $expiration})
         WITH user
         OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
         WITH user, COLLECT(DISTINCT token {

@@ -503,7 +503,7 @@ class DataInterface {
         ]);
         const uuid = v4();
         const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
-        const aUser = await this.dataService.linkTokenToUser({uuid}, userInfo);
+        const aUser = await this.dataService.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
         if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), new Token(uuid));
         return {
             token: accessToken,
