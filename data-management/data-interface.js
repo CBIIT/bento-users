@@ -30,6 +30,7 @@ const {EventLoggingService} = require("./event-logging");
 const {NotifyUserService} = require("../services/notify-user");
 const {NotifyService} = require("../services/notify");
 const TokenCondition = require("../model/valid-conditions/token-condition");
+const {addSeconds, getTimeNow} = require("../util/time-util");
 
 class DataInterface {
     
@@ -504,7 +505,8 @@ class DataInterface {
         const uuid = v4();
         const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
         const aUser = await this.dataService.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
-        if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), new Token(uuid));
+        const token = new Token(uuid, addSeconds(getTimeNow(), config.token_timeout));
+        if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), token);
         return {
             token: accessToken,
             message: 'This token can only be viewed once and will be lost if it is not saved by the user'
