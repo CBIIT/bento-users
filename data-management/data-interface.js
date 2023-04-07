@@ -20,7 +20,7 @@ const GeneralUserCondition = require("../model/valid-conditions/general-user-con
 const {getUniqueArr, isCaseInsensitiveEqual, isElementInArrayCaseInsensitive, isElementInArray} = require("../util/string-util");
 const {getApprovedArmIDs} = require("../services/arm-access");
 const ArmAccess = require("../model/arm-access");
-const {createToken} = require("../services/tokenizer");
+const {createToken, getAccessToken, verifyToken, decodeToken} = require("../services/tokenizer");
 //model
 const User = require("../bento-event-logging/model/User");
 const Token = require("../bento-event-logging/model/Token");
@@ -29,6 +29,8 @@ const {NotificationsService} = require("./notifications");
 const {EventLoggingService} = require("./event-logging");
 const {NotifyUserService} = require("../services/notify-user");
 const {NotifyService} = require("../services/notify");
+const TokenCondition = require("../model/valid-conditions/token-condition");
+const {addSeconds, getTimeNow, dateToEpochTimeStamp} = require("../util/time-util");
 
 class DataInterface {
     
@@ -64,10 +66,16 @@ class DataInterface {
         });
     }
 
+    getUserAccessInfo (headers, sessionUserInfo) {
+        const accessToken = getAccessToken(headers);
+        let loginInfo = verifyToken(accessToken, config.token_secret) ? decodeToken(accessToken, config.token_secret) : sessionUserInfo;
+        return [accessToken, loginInfo];
+    }
+
     async getMyUser(_, context){
-        let loginInfo = context.userInfo;
+        const [accessToken, loginInfo] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
-            new LoginCondition(loginInfo.email, loginInfo.IDP)
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(loginInfo)) : new LoginCondition(loginInfo.email, loginInfo.IDP)
         ]);
         let activeUser = await this.dataService.getMyUser(loginInfo);
         // store user if not exists in db
@@ -79,10 +87,10 @@ class DataInterface {
     }
     
      async getUser(parameters, context){
-        let activeUser = context.userInfo;
-        if (!this.verifyUserInfo(activeUser)) {
-            throw new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         //Check if not admin
         if (!await this.checkAdminPermissions(activeUser)) {
             throw new Error(errorName.NOT_AUTHORIZED);
@@ -91,11 +99,10 @@ class DataInterface {
     }
 
     async listUsers(input, context){
-        let activeUser = context.userInfo;
-        //Check logged in
-        if (!this.verifyUserInfo(activeUser)) {
-            throw new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         //Check if not admin
         if (!await this.checkAdminPermissions(activeUser)) {
             throw new Error(errorName.NOT_AUTHORIZED);
@@ -105,18 +112,18 @@ class DataInterface {
     }
 
     async listArms(input, context){
-        let activeUser = context.userInfo;
-        if (!this.verifyUserInfo(activeUser)) {
-            throw new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         return await this.dataService.listArms(input);
     }
 
     async requestAccess(parameters, context){
-        let activeUser = context.userInfo;
+        let [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         // Validate login and parameters
         this.isValidOrThrow([
-            new LoginCondition(activeUser.email, activeUser.IDP),
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret,await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
             new ArmReqUserStatusCondition(activeUser.userStatus),
             new ArmRequestParamsCondition(parameters.userInfo.armIDs)
         ]);
@@ -222,10 +229,10 @@ class DataInterface {
     }
 
      async approveAccess(parameters, context){
-        const activeUser = context.userInfo;
-        if (!this.verifyUserInfo(activeUser)) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         if (!await this.checkAdminPermissions(activeUser)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
@@ -256,10 +263,10 @@ class DataInterface {
     }
 
      async rejectAccess(parameters, context){
-        const activeUser = context.userInfo;
-        if (!this.verifyUserInfo(activeUser)) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         if (!await this.checkAdminPermissions(activeUser)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
@@ -291,10 +298,10 @@ class DataInterface {
 
      async revokeAccess(parameters, context){
         try {
-            const activeUser = context.userInfo;
-            if (!this.verifyUserInfo(activeUser)) {
-                return new Error(errorName.NOT_LOGGED_IN);
-            }
+            const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+            this.isValidOrThrow([
+                (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+            ]);
             if (!await this.checkAdminPermissions(activeUser)) {
                 return new Error(errorName.NOT_AUTHORIZED);
             }
@@ -335,10 +342,10 @@ class DataInterface {
     }
 
      async editUser(parameters, context){
-        const activeUser = context.userInfo;
-        if (!this.verifyUserInfo(activeUser)) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         if (!await this.checkAdminPermissions(activeUser)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
@@ -370,9 +377,9 @@ class DataInterface {
     }
 
      async updateMyUser(parameters, context){
-        let activeUser = context.userInfo;
-         this.isValidOrThrow([
-            new LoginCondition(activeUser.email, activeUser.IDP)
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP)
         ]);
         const initialUserState = activeUser;
         const currentUserState = await this.dataService.updateMyUser(parameters.userInfo, context.userInfo);
@@ -381,18 +388,14 @@ class DataInterface {
         return currentUserState;
     }
 
-    verifyUserInfo(userInfo) {
-        return userInfo && userInfo.email && userInfo.IDP;
-    }
-
      async listRequest(params, context){
-        let activeUser = context.userInfo;
         //Check logged in
-        if (!this.verifyUserInfo(activeUser)) {
-            return new Error(errorName.NOT_LOGGED_IN);
-        }
+        const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
+        ]);
         //Check if not admin
-        else if (!await this.checkAdminPermissions(activeUser)) {
+        if (!await this.checkAdminPermissions(activeUser)) {
             return new Error(errorName.NOT_AUTHORIZED);
         }
         //Execute query
@@ -459,10 +462,10 @@ class DataInterface {
     }
 
      async downloadEvents(req, res){
-        const activeUser = req.session.userInfo;
-        if (!this.verifyUserInfo(activeUser)) {
-            throw new Error(errorName.NOT_LOGGED_IN);
-        }
+        let [accessToken, activeUser] = this.getUserAccessInfo(req.headers, req.session.userInfo);
+        this.isValidOrThrow([
+            (accessToken) ? new TokenCondition(accessToken, config.token_secret,await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP)
+        ]);
         if (!await this.checkAdminPermissions(activeUser)) {
             throw new Error(errorName.NOT_AUTHORIZED);
         }
@@ -502,7 +505,9 @@ class DataInterface {
         const uuid = v4();
         const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
         const aUser = await this.dataService.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
-        if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), new Token(uuid, config.token_timeout));
+        const logTime = addSeconds(getTimeNow(), config.token_timeout).toString();
+        const token = new Token(uuid, dateToEpochTimeStamp(logTime));
+        if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), token);
         return {
             token: accessToken,
             message: 'This token can only be viewed once and will be lost if it is not saved by the user'
