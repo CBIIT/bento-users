@@ -7,5 +7,8 @@ module.exports = {
         const time = new Date(date);
         // milliseconds to second
         return new Date(time.getTime() + seconds * 1000);
+    },
+    dateToEpochTimeStamp(timeStr) {
+        return Date.parse(timeStr)
     }
 }
