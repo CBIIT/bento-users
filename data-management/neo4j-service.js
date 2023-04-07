@@ -83,6 +83,18 @@ class Neo4jService {
         return result[0];
     }
 
+    async getUserTokenUUIDs(parameters) {
+        const cypher =
+            `
+        MATCH (user:User)
+        WHERE user.email = $email AND user.IDP = $IDP
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
+        RETURN COLLECT(DISTINCT token.uuid) as uuids
+        `
+        const result = await this.runNeo4jQuery(parameters, cypher, 'uuids');
+        return result[0];
+    }
+
     async getMyUser(parameters) {
         const cypher =
             `
@@ -658,11 +670,11 @@ class Neo4jService {
         MATCH (user:User)
         WHERE
             user.email = '${userInfo.email}' AND user.IDP = '${userInfo.IDP}'
-        MERGE (user)<-[:of_token]-(token:Token {uuid: $uuid,expiration: $expiration })
+        MERGE (user)<-[:of_token]-(token:Token {uuid: $uuid,expiration: $expiration})
         WITH user
         OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
         WITH user, COLLECT(DISTINCT token {
-            uuid: $uuid, expiration: $expiration
+            uuid: $uuid
         }) as token
         RETURN {
             firstName: user.firstName,

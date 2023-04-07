@@ -4,7 +4,8 @@ const {ReviewEvent} = require("../bento-event-logging/model/review-event");
 const {UpdateEvent} = require("../bento-event-logging/model/update-event");
 const {PENDING, APPROVED, REVOKED} = require("../bento-event-logging/const/access-constant");
 const {NOT_APPLICABLE, DISABLED} = require("../bento-event-logging/const/user-constant");
-
+const {TokenCreateEvent} = require("../bento-event-logging/model/token-create-event");
+const {TokenInvalidatedEvent} = require("../bento-event-logging/model/token-invalidated-event");
 
 class EventLoggingService {
 
@@ -53,6 +54,16 @@ class EventLoggingService {
                 NOT_APPLICABLE, NOT_APPLICABLE, u.userID, u.userEmail, u.IDP));
         }
     };
+
+    async logCreateToken(user, token) {
+        const createTokenEnt = new TokenCreateEvent(user, token);
+        await this.dataService.logEventNeo4j(createTokenEnt);
+    }
+
+    async logInvalidatedToken(user, token) {
+        const createTokenEnt = new TokenInvalidatedEvent(user, token);
+        await this.dataService.logEventNeo4j(createTokenEnt);
+    }
 }
 
 module.exports = {EventLoggingService}

@@ -22,7 +22,8 @@ const root = {
     updateMyUser: dataInterface.updateMyUser.bind(dataInterface),
     getUser: dataInterface.getUser.bind(dataInterface),
     requestAccess: dataInterface.requestAccess.bind(dataInterface),
-    listRequest: dataInterface.listRequest.bind(dataInterface)
+    listRequest: dataInterface.listRequest.bind(dataInterface),
+    grantToken: dataInterface.grantToken.bind(dataInterface)
 };
 
 module.exports = (req, res) => {
