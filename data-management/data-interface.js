@@ -461,6 +461,10 @@ class DataInterface {
         return disableUsers;
     }
 
+    async deleteExpiredTokenUUIDs() {
+        return await this.dataService.deleteExpiredTokenUUIDs();
+    }
+
     async downloadEvents(req, res){
         let [accessToken, activeUser] = this.getUserAccessInfo(req.headers, req.session.userInfo);
         this.isValidOrThrow([

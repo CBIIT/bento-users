@@ -4,7 +4,7 @@ const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
 const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../bento-event-logging/const/user-constant");
 const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
-const {LOGIN} = require("../bento-event-logging/const/event-types");
+const {LOGIN, TOKEN_CREATED} = require("../bento-event-logging/const/event-types");
 const {executeQuery, logEvent, getRecentEvents} = require("../bento-event-logging/neo4j/neo4j-operations");
 
 class Neo4jService {
@@ -628,6 +628,24 @@ class Neo4jService {
         }) as user
         `
         const result = await this.runNeo4jQuery(params, cypher, 'user');
+        return result[0];
+    }
+
+    async deleteExpiredTokenUUIDs() {
+        const cypher =
+            `
+        MATCH (e:Event)
+        WHERE
+            e.event_type = '${TOKEN_CREATED}' AND
+            toInteger(e.token_expiration) < toInteger(timestamp())
+        WITH e
+        MATCH (token:Token)
+        WHERE 
+            e.token_uuid = token.uuid
+        DETACH DELETE token
+        RETURN COLLECT(DISTINCT e.token_uuid) AS token_uuids
+        `
+        const result = await this.runNeo4jQuery({}, cypher, 'token_uuids');
         return result[0];
     }
 
