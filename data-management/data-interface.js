@@ -85,8 +85,8 @@ class DataInterface {
         this.updateUserInSession(context, activeUser);
         return activeUser;
     }
-    
-     async getUser(parameters, context){
+
+    async getUser(parameters, context){
         const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
             (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
@@ -185,7 +185,7 @@ class DataInterface {
         return generalUserCondition;
     }
 
-     async addArmRequestAccess(armIDs, context){
+    async addArmRequestAccess(armIDs, context){
         let activeUser = context.userInfo;
          this.isValidOrThrow([
             new idpCondition(activeUser.email, activeUser.IDP),
@@ -198,7 +198,7 @@ class DataInterface {
         return response;
     }
 
-     async registerUser(firstName, lastName, email, IDP, isNotify){
+    async registerUser(firstName, lastName, email, IDP, isNotify){
         this.isValidOrThrow([
             new idpCondition(email, IDP)]
         );
@@ -228,7 +228,7 @@ class DataInterface {
         return response;
     }
 
-     async approveAccess(parameters, context){
+    async approveAccess(parameters, context){
         const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
             (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
@@ -262,7 +262,7 @@ class DataInterface {
         return response;
     }
 
-     async rejectAccess(parameters, context){
+    async rejectAccess(parameters, context){
         const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
             (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
@@ -296,7 +296,7 @@ class DataInterface {
         return response;
     }
 
-     async revokeAccess(parameters, context){
+    async revokeAccess(parameters, context){
         try {
             const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
             this.isValidOrThrow([
@@ -341,7 +341,7 @@ class DataInterface {
         return userParams;
     }
 
-     async editUser(parameters, context){
+    async editUser(parameters, context){
         const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
             (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP),
@@ -376,7 +376,7 @@ class DataInterface {
         return response;
     }
 
-     async updateMyUser(parameters, context){
+    async updateMyUser(parameters, context){
         const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
             (accessToken) ? new TokenCondition(accessToken, config.token_secret, await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP)
@@ -388,7 +388,7 @@ class DataInterface {
         return currentUserState;
     }
 
-     async listRequest(params, context){
+    async listRequest(params, context){
         //Check logged in
         const [accessToken, activeUser] = this.getUserAccessInfo(context.req.headers, context.userInfo);
         this.isValidOrThrow([
@@ -433,7 +433,7 @@ class DataInterface {
         context.userInfo = user;
     }
 
-     async disableInactiveUsers(){
+    async disableInactiveUsers(){
         const disableUsers = await this.dataService.getInactiveUsers();
         if (disableUsers && disableUsers.length > 0) {
             // Disable inactive users
@@ -461,7 +461,7 @@ class DataInterface {
         return disableUsers;
     }
 
-     async downloadEvents(req, res){
+    async downloadEvents(req, res){
         let [accessToken, activeUser] = this.getUserAccessInfo(req.headers, req.session.userInfo);
         this.isValidOrThrow([
             (accessToken) ? new TokenCondition(accessToken, config.token_secret,await this.dataService.getUserTokenUUIDs(activeUser)) : new LoginCondition(activeUser.email, activeUser.IDP)
