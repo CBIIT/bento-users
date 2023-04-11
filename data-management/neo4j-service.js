@@ -634,19 +634,12 @@ class Neo4jService {
     async deleteExpiredTokenUUIDs() {
         const cypher =
             `
-        MATCH (e:Event)
-        WHERE
-            e.event_type = '${TOKEN_CREATED}' AND
-            toInteger(e.token_expiration) < toInteger(timestamp())
-        WITH e
         MATCH (token:Token)
         WHERE 
-            e.token_uuid = token.uuid
+            toInteger(token.expiration) < toInteger(timestamp())
         DETACH DELETE token
-        RETURN COLLECT(DISTINCT e.token_uuid) AS token_uuids
         `
-        const result = await this.runNeo4jQuery({}, cypher, 'token_uuids');
-        return result[0];
+        await this.runNeo4jQuery({}, cypher, '');
     }
 
     async getInactiveUsers() {
