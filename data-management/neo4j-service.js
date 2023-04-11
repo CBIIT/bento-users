@@ -1,10 +1,9 @@
-const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
 const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../bento-event-logging/const/user-constant");
 const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
-const {LOGIN, TOKEN_CREATED} = require("../bento-event-logging/const/event-types");
+const {LOGIN} = require("../bento-event-logging/const/event-types");
 const {executeQuery, logEvent, getRecentEvents} = require("../bento-event-logging/neo4j/neo4j-operations");
 
 class Neo4jService {
