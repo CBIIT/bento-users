@@ -461,6 +461,10 @@ class DataInterface {
         return disableUsers;
     }
 
+    async deleteExpiredTokenUUIDs() {
+        return await this.dataService.deleteExpiredTokenUUIDs();
+    }
+
     async downloadEvents(req, res){
         let [accessToken, activeUser] = this.getUserAccessInfo(req.headers, req.session.userInfo);
         this.isValidOrThrow([
@@ -497,6 +501,11 @@ class DataInterface {
         return fileName;
     }
 
+    epochLogTime() {
+        const logTime = addSeconds(getTimeNow(), config.token_timeout).toString();
+        return dateToEpochTimeStamp(logTime);
+    }
+
     async grantToken (_, context){
         const userInfo = context.userInfo;
         this.isValidOrThrow([
@@ -504,9 +513,8 @@ class DataInterface {
         ]);
         const uuid = v4();
         const accessToken = createToken({...userInfo, uuid}, config.token_secret, config.token_timeout);
-        const aUser = await this.dataService.linkTokenToUser({uuid, expiration: config.token_timeout}, userInfo);
-        const logTime = addSeconds(getTimeNow(), config.token_timeout).toString();
-        const token = new Token(uuid, dateToEpochTimeStamp(logTime));
+        const aUser = await this.dataService.linkTokenToUser({uuid, expiration: this.epochLogTime()}, userInfo);
+        const token = new Token(uuid, this.epochLogTime());
         if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), token);
         return {
             token: accessToken,

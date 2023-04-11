@@ -1,4 +1,3 @@
-const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
@@ -629,6 +628,17 @@ class Neo4jService {
         `
         const result = await this.runNeo4jQuery(params, cypher, 'user');
         return result[0];
+    }
+
+    async deleteExpiredTokenUUIDs() {
+        const cypher =
+            `
+        MATCH (token:Token)
+        WHERE 
+            toInteger(token.expiration) < toInteger(timestamp())
+        DETACH DELETE token
+        `
+        await this.runNeo4jQuery({}, cypher, '');
     }
 
     async getInactiveUsers() {

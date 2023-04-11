@@ -71,6 +71,8 @@ app.use('/api/users', events_router);
 cronJob.schedule("1 0 1,10 * * *", async () => {
     console.log("Running a scheduled background task to disable inactive users at " + getTimeNow());
     await dataInterface.disableInactiveUsers();
+    console.log("Running a scheduled background task to delete expired token uuids at " + getTimeNow());
+    await dataInterface.deleteExpiredTokenUUIDs()
 });
 
 // catch 404 and forward to error handler
