@@ -23,8 +23,7 @@ const root = {
     getUser: dataInterface.getUser.bind(dataInterface),
     requestAccess: dataInterface.requestAccess.bind(dataInterface),
     listRequest: dataInterface.listRequest.bind(dataInterface),
-    grantToken: dataInterface.grantToken.bind(dataInterface),
-    disableInactiveUsers: dataInterface.disableInactiveUsers.bind(dataInterface)
+    grantToken: dataInterface.grantToken.bind(dataInterface)
 };
 
 module.exports = (req, res) => {
