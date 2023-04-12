@@ -90,7 +90,7 @@ type UserRequest {
 }
 
 type Token {
-    token: String
+    token: [String]
     message: String
 }
 
@@ -101,8 +101,6 @@ type Query {
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
-    grantToken: Token
-
     "Open to any authenticated users"
     listArms: [Arm]
 }
@@ -111,7 +109,8 @@ type Mutation {
     "User initiated operations"
     requestAccess (userInfo: RequestAccessInput!): User
     updateMyUser (userInfo: UpdateUserInput!): User
-
+    grantToken: Token
+    invalidateToken(uuids: [String] = []): Token
     "Admin only operations"
     approveAccess (userID: ID!, armIDs: [String]!, comment: String = ""): [Access]
     rejectAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]

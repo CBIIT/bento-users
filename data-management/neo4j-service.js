@@ -82,6 +82,26 @@ class Neo4jService {
         return result[0];
     }
 
+    async deleteUserTokenByUUIDs(isAdmin, parameters) {
+        const cypher =
+        `
+        MATCH (user:User)
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
+        WHERE 
+            token.uuid IN $uuids
+            ${!isAdmin ? 'AND user.email = $email AND user.IDP = $IDP' : ''}
+        WITH token, COLLECT(DISTINCT token.uuid) as tokens
+        DETACH DELETE token
+        RETURN tokens as uuids
+        `
+        const response = await this.runNeo4jQuery(parameters, cypher, 'uuids');
+        const result = [];
+        Array.from(response).forEach((token)=>{
+            if (token.length > 0) result.push(token[0]);
+        });
+        return result;
+    }
+
     async getUserTokenUUIDs(parameters) {
         const cypher =
             `

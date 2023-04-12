@@ -60,8 +60,8 @@ class EventLoggingService {
         await this.dataService.logEventNeo4j(createTokenEnt);
     }
 
-    async logInvalidatedToken(user, token) {
-        const createTokenEnt = new TokenInvalidatedEvent(user, token);
+    async logInvalidatedToken(user, tokenUUIDs) {
+        const createTokenEnt = new TokenInvalidatedEvent(user, tokenUUIDs);
         await this.dataService.logEventNeo4j(createTokenEnt);
     }
 }

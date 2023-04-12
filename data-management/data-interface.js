@@ -51,13 +51,17 @@ class DataInterface {
         return accessList.every((a) => existingAccess.includes(a))
     }
 
-    async checkAdminPermissions(userInfo) {
-        let result = await this.dataService.getMyUser(userInfo);
+    isAdminUser(user) {
         try {
-            return isCaseInsensitiveEqual(result.role, ADMIN) && isCaseInsensitiveEqual(result.userStatus, ACTIVE);
+            return isCaseInsensitiveEqual(user.role, ADMIN) && isCaseInsensitiveEqual(user.userStatus, ACTIVE);
         } catch (err) {
             return false;
         }
+    }
+
+    async checkAdminPermissions(userInfo) {
+        let user = await this.dataService.getMyUser(userInfo);
+        return this.isAdminUser(user)
     }
 
     isValidOrThrow(conditions){
@@ -517,11 +521,25 @@ class DataInterface {
         const token = new Token(uuid, this.epochLogTime());
         if (aUser) await this.eventLoggingService.logCreateToken(new User(aUser.userID, aUser.email, aUser.IDP), token);
         return {
-            token: accessToken,
+            token: [accessToken],
             message: 'This token can only be viewed once and will be lost if it is not saved by the user'
         }
     }
 
+    async invalidateToken(parameters, context) {
+        const userInfo = context.userInfo;
+        this.isValidOrThrow([
+            new LoginCondition(userInfo.email, userInfo.IDP)
+        ]);
+        let aUser = await this.dataService.getMyUser(userInfo);
+        const isAdmin = this.isAdminUser(userInfo);
+        const deletedUUIDs = await this.dataService.deleteUserTokenByUUIDs(isAdmin, {uuids: parameters.uuids, ...userInfo});
+        if (deletedUUIDs) await this.eventLoggingService.logInvalidatedToken(new User(aUser.userID, aUser.email, aUser.IDP), deletedUUIDs);
+        return {
+            token: deletedUUIDs,
+            message: 'The returned tokens are successfully invalidated'
+        }
+    }
 }
 
 module.exports = {
