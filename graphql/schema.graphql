@@ -17,6 +17,7 @@ type User {
     editDate: String
 
     acl: [Access]
+    tokens: [String]
 }
 
 type UserInfo {
@@ -40,6 +41,7 @@ type UserInfo {
 
     numberOfArms: Int
     acl: [Access]
+    tokens: [String]
 }
 
 type Access {

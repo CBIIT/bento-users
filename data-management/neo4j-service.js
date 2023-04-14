@@ -141,7 +141,7 @@ class Neo4jService {
                 reviewDate: request.reviewDate,
                 comment: request.comment
             }) END as acl,
-            CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT token.uuid) END as uuids
+            COLLECT(DISTINCT token.uuid) as tokens
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -154,7 +154,7 @@ class Neo4jService {
             creationDate: user.creationDate,
             editDate: user.editDate,
             acl: acl,
-            uuids: uuids
+            tokens: tokens
         } AS user
         `
         const result = await this.runNeo4jQuery(parameters, cypher, 'user');
@@ -170,15 +170,18 @@ class Neo4jService {
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -190,7 +193,8 @@ class Neo4jService {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `
         const result = await this.runNeo4jQuery(parameters, cypher, 'user');
@@ -206,15 +210,18 @@ class Neo4jService {
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -226,7 +233,8 @@ class Neo4jService {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `
         const result = await this.runNeo4jQuery(parameters, cypher, 'user');
@@ -245,7 +253,9 @@ class Neo4jService {
         WITH user, access, totalNumOfArms
         OPTIONAL MATCH (access)-[:of_arm]->(arm:Arm)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
-        WITH user, 
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user,
+            COLLECT(DISTINCT t.uuid) AS tokens,
             user.lastName + ', ' + user.firstName AS displayName, 
             CASE WHEN user.role = '${ADMIN}' THEN totalNumOfArms ELSE COUNT(DISTINCT arm) END AS numberOfArms,
             COLLECT(DISTINCT access{
@@ -270,7 +280,8 @@ class Neo4jService {
             creationDate: user.creationDate,
             editDate: user.editDate,
             numberOfArms: numberOfArms,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
     `
         return await this.runNeo4jQuery(parameters, cypher, 'user');
@@ -480,15 +491,18 @@ class Neo4jService {
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -500,7 +514,8 @@ class Neo4jService {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `;
         if (parameters.role) {
@@ -535,15 +550,18 @@ class Neo4jService {
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(access)
-        WITH user, COLLECT(DISTINCT access{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: access.accessStatus,
-            requestDate: access.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: access.reviewDate,
-            comment: access.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT access{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: access.accessStatus,
+                requestDate: access.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: access.reviewDate,
+                comment: access.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -555,7 +573,8 @@ class Neo4jService {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `;
         const result = await this.runNeo4jQuery(parameters, cypher, 'user');
