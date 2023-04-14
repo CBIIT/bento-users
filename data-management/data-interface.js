@@ -532,8 +532,7 @@ class DataInterface {
             new LoginCondition(userInfo.email, userInfo.IDP)
         ]);
         let aUser = await this.dataService.getMyUser(userInfo);
-        const isAdmin = this.isAdminUser(userInfo);
-        const deletedUUIDs = await this.dataService.deleteUserTokenByUUIDs(isAdmin, {uuids: parameters.uuids, ...userInfo});
+        const deletedUUIDs = await this.dataService.deleteUserTokenByUUIDs({uuids: parameters.uuids, ...userInfo});
         if (deletedUUIDs) await this.eventLoggingService.logInvalidatedToken(new User(aUser.userID, aUser.email, aUser.IDP), deletedUUIDs);
         return {
             token: deletedUUIDs,

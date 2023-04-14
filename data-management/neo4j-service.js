@@ -82,17 +82,24 @@ class Neo4jService {
         return result[0];
     }
 
-    async deleteUserTokenByUUIDs(isAdmin, parameters) {
+    async deleteUserTokenByUUIDs(parameters) {
         const cypher =
         `
         MATCH (user:User)
-        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
-        WHERE 
-            token.uuid IN $uuids
-            ${!isAdmin ? 'AND user.email = $email AND user.IDP = $IDP' : ''}
-        WITH token, COLLECT(DISTINCT token.uuid) as tokens
+        WHERE
+            user.email = $email AND user.IDP = $IDP
+        WITH user
+        MATCH (t:Token)
+        WHERE
+            t.uuid IN $uuids
+        WITH user, t
+        OPTIONAL MATCH (user)<-[:of_token]-(userToken:Token)
+        WHERE
+            userToken.uuid IN $uuids
+        WITH CASE user.role = '${ADMIN}' AND user.userStatus = '${ACTIVE}' WHEN TRUE THEN t ELSE userToken END as token
+        WITH token, COLLECT(DISTINCT token.uuid) as uuids
         DETACH DELETE token
-        RETURN tokens as uuids
+        RETURN uuids as uuids
         `
         const response = await this.runNeo4jQuery(parameters, cypher, 'uuids');
         const result = [];
@@ -122,16 +129,19 @@ class Neo4jService {
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
         // a disabled user does not have access to acl
-        WITH user, CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) END as acl
+        WITH user, 
+            CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) END as acl,
+            CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT token.uuid) END as uuids
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -143,7 +153,8 @@ class Neo4jService {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            uuids: uuids
         } AS user
         `
         const result = await this.runNeo4jQuery(parameters, cypher, 'user');
