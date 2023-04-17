@@ -9,16 +9,36 @@ jest.mock("../../data-management/neo4j-service")
 const neo4jService = new Neo4jService();
 const dataInterface = new DataInterface(neo4jService);
 describe('getMyUser() Test', () => {
-    let userInfo, context, eventsLog;
+    let loginUserInfo, nonLoginUserInfo, testUser, context, eventsLog, req;
     beforeEach(() => {
-        userInfo = {
+        loginUserInfo = {
             firstName: "test first name",
             lastName: "test last name",
             email: "test@email.com",
             IDP: GOOGLE,
         };
+        nonLoginUserInfo = {
+            organization: "test org",
+            userID: "test id",
+            creationDate: getTimeNow(),
+            editDate: "",
+            userStatus: NONE,
+            role: NON_MEMBER,
+            acl: [],
+            tokens: []
+        }
+        testUser = {
+            ...loginUserInfo,
+            ...nonLoginUserInfo
+        }
+        req = {
+            headers: {}
+        }
         context = {
-            userInfo: userInfo
+            userInfo: loginUserInfo,
+            req: {
+                headers: undefined
+            }
         };
         eventsLog = [];
         neo4jService.logEventNeo4j.mockImplementation((event) =>{
@@ -27,15 +47,6 @@ describe('getMyUser() Test', () => {
     });
 
     test('test getting an existing user', async () => {
-        let testUser = {
-            ...userInfo,
-            organization: "test org",
-            userID: "test id",
-            creationDate: getTimeNow(),
-            editDate: "",
-            userStatus: NONE,
-            role: NON_MEMBER
-        };
         neo4jService.checkUnique.mockImplementation(() => {
            return true;
         });
@@ -47,15 +58,6 @@ describe('getMyUser() Test', () => {
     });
 
     test('test registering a new user', async () => {
-        let testUser = {
-            ...userInfo,
-            organization: "test org",
-            userID: "test id",
-            creationDate: getTimeNow(),
-            editDate: "",
-            userStatus: NONE,
-            role: NON_MEMBER
-        };
         neo4jService.checkUnique.mockImplementation(() => {
             return true;
         });
@@ -71,15 +73,6 @@ describe('getMyUser() Test', () => {
     });
 
     test('test registering an existing user', async () => {
-        let testUser = {
-            ...userInfo,
-            organization: "test org",
-            userID: "test id",
-            creationDate: getTimeNow(),
-            editDate: "",
-            userStatus: NONE,
-            role: NON_MEMBER
-        };
         neo4jService.checkUnique.mockImplementation(() => {
             return false;
         });
@@ -94,15 +87,6 @@ describe('getMyUser() Test', () => {
     });
 
     test('test registering an existing user', async () => {
-        let testUser = {
-            ...userInfo,
-            organization: "test org",
-            userID: "test id",
-            creationDate: getTimeNow(),
-            editDate: "",
-            userStatus: NONE,
-            role: NON_MEMBER
-        };
         neo4jService.checkUnique.mockImplementation(() => {
             return false;
         });
@@ -117,30 +101,21 @@ describe('getMyUser() Test', () => {
     });
 
     test('test missing email in user info', async () => {
-        userInfo.email = undefined;
+        loginUserInfo.email = undefined;
         await badUserInfoTest(errorName.NOT_LOGGED_IN);
     });
 
     test('test missing idp in user info', async () => {
-        userInfo.IDP = undefined;
+        loginUserInfo.IDP = undefined;
         await badUserInfoTest(errorName.NOT_LOGGED_IN);
     });
 
     test('test invalid IDP in user info', async () => {
-        userInfo.IDP = "invalid";
+        loginUserInfo.IDP = "invalid";
         await badUserInfoTest(errorName.INVALID_IDP);
     });
 
     test('test user registration fails', async () => {
-        let testUser = {
-            ...userInfo,
-            organization: "test org",
-            userID: "test id",
-            creationDate: getTimeNow(),
-            editDate: "",
-            userStatus: NONE,
-            role: NON_MEMBER
-        };
         neo4jService.checkUnique.mockImplementation(() => {
             return true;
         });
@@ -155,15 +130,6 @@ describe('getMyUser() Test', () => {
     });
 
     async function badUserInfoTest(error) {
-        let testUser = {
-            ...userInfo,
-            organization: "test org",
-            userID: "test id",
-            creationDate: getTimeNow(),
-            editDate: "",
-            userStatus: NONE,
-            role: NON_MEMBER
-        };
         neo4jService.checkUnique.mockImplementation(() => {
             return true;
         });
