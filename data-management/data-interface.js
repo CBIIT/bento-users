@@ -533,7 +533,7 @@ class DataInterface {
         ]);
         let aUser = await this.dataService.getMyUser(userInfo);
         const deletedUUIDs = await this.dataService.deleteUserTokenByUUIDs({uuids: parameters.uuids, ...userInfo});
-        if (deletedUUIDs) await this.eventLoggingService.logInvalidatedToken(new User(aUser.userID, aUser.email, aUser.IDP), deletedUUIDs);
+        if (deletedUUIDs.length > 0) await this.eventLoggingService.logInvalidatedToken(new User(aUser.userID, aUser.email, aUser.IDP), deletedUUIDs);
         return {
             token: deletedUUIDs,
             message: 'The returned tokens are successfully invalidated'
