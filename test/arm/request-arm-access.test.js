@@ -1,6 +1,6 @@
-const {requestAccess:reqArmAccess} = require("../../data-management/data-interface");
+const {DataInterface} = require("../../data-management/data-interface");
 const {updateMyUser:updateMyUserService,requestArmAccess: requestArmAccessService, getMyUser, getUser:getUserService,
-    searchValidRequestArm, getAdminEmails
+    searchValidRequestArm, getAdminEmails, Neo4jService
 } = require("../../data-management/neo4j-service");
 const {notifyUserArmAccessRequest, notifyAdminArmAccessRequest} = require("../../data-management/notifications");
 const {errorName} = require("../../data-management/graphql-api-constants");
@@ -34,7 +34,7 @@ describe('arm access Test', () => {
 
     test('/test arm request with invalid idp', async () => {
         searchValidRequestArm.mockReturnValue(["arm"]);
-        getMyUser.mockReturnValue(mockAccessResult);
+        neo4jService.getMyUser.mockReturnValue(mockAccessResult);
         let parameters = {
             userID: 8,
             userInfo: {
@@ -45,7 +45,7 @@ describe('arm access Test', () => {
         }
         let session = JSON.parse(JSON.stringify(fakeSession));
         session.userInfo.idp = 'random idp'
-        await expect(reqArmAccess(parameters, session))
+        await expect(dataInterface.re(parameters, session))
             .rejects
             .toThrow(errorName.INVALID_IDP);
     });

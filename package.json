@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "test": "jest"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
@@ -11,15 +12,15 @@
     "debug": "~2.6.9",
     "dotenv": "^16.0.3",
     "easygraphql-format-error": "^0.0.3",
-    "graphql-http": "^1.16.0",
     "express": "~4.18.2",
     "express-mysql-session": "^2.1.8",
     "express-session": "^1.17.3",
     "googleapis": "^95.0.0",
     "graphql": "15.8.0",
+    "graphql-http": "^1.16.0",
     "http-errors": "~1.6.3",
-    "pug": "^3.0.2",
     "js-yaml": "^4.1.0",
+    "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "morgan": "~1.9.1",
@@ -28,6 +29,7 @@
     "node-cron": "^3.0.2",
     "node-fetch": "^2.6.9",
     "nodemailer": "^6.9.1",
+    "pug": "^3.0.2",
     "session-file-store": "^1.5.0",
     "underscore": "^1.13.6",
     "uuid": "^8.3.2"

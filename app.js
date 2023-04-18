@@ -8,10 +8,12 @@ const cors = require('cors');
 const config = require('./config');
 const {createSession} = require("./services/session");
 const cronJob = require("node-cron");
-const {disableInactiveUsers} = require("./data-management/data-interface");
+const {DataInterface} = require("./data-management/data-interface");
 const {getTimeNow} = require("./util/time-util");
 const events_router = require("./data-management/events-router");
-
+const {Neo4jService} = require("./data-management/neo4j-service");
+const {neo4jDriver} = require("./data-management/neo4j-driver");
+const dataInterface = new DataInterface(new Neo4jService(neo4jDriver));
 //Print configuration
 console.log(config);
 
@@ -21,14 +23,6 @@ if (!fs.existsSync(LOG_FOLDER)) {
 }
 // create a write stream (in append mode)
 const accessLogStream = fs.createWriteStream(path.join(__dirname, LOG_FOLDER, 'access.log'), { flags: 'a'})
-
-
-const versionEndpoint = function(req, res) {
-    res.json({
-        version: config.version,
-        date: config.date
-    });
-};
 
 const create404 = function(req, res, next) {
     next(createError(404));
@@ -73,10 +67,12 @@ app.use(createSession({ sessionSecret: config.cookie_secret, session_timeout: co
 app.use('/api/users/graphql', graphql);
 app.use('/api/users', events_router);
 
-// Scheduled cronjob twice a day (5am, 8pm) eastern time
+// Scheduled cronjob twice a day (1am, 10am) eastern time
 cronJob.schedule("1 0 1,10 * * *", async () => {
     console.log("Running a scheduled background task to disable inactive users at " + getTimeNow());
-    await disableInactiveUsers();
+    await dataInterface.disableInactiveUsers();
+    console.log("Running a scheduled background task to delete expired token uuids at " + getTimeNow());
+    await dataInterface.deleteExpiredTokenUUIDs()
 });
 
 // catch 404 and forward to error handler
