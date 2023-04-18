@@ -229,7 +229,11 @@ class DataInterface {
                 this.notificationsService.sendRegistrationConfirmation);
         }
         await this.eventLoggingService.logRegisterUser(registrationInfo.userID, registrationInfo.email, registrationInfo.IDP);
-        return response;
+        return {
+            ...response,
+            acl: [],
+            tokens: []
+        };
     }
 
     async approveAccess(parameters, context){
