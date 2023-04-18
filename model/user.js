@@ -84,7 +84,7 @@ class UserBuilder {
         if (!this._role) this._role = '';
         if (!this._status) this._status = '';
         if (!this._tokens) this._tokens = [];
-        return new User(this._firstName, this._lastName, this._email, this._idp, this._role, this._status, this._organization, this._acl);
+        return new User(this._firstName, this._lastName, this._email, this._idp, this._role, this._status, this._organization, this._acl, this._tokens);
     }
 }
 
