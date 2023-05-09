@@ -154,7 +154,7 @@ class DataInterface {
                     "user": `${activeUser.firstName} ${activeUser.lastName}`
                 }
                 await this.notifyService.notifyTemplate(activeUser.email, activeUser.firstName, activeUser.lastName, messageVariables,
-                    this.notificationsService.notifyAdminArmAccessRequest, this.notificationsService.notifyUserArmAccessRequest);
+                    this.notificationsService.notifyAdminArmAccessRequest.bind(this.notificationsService), this.notificationsService.notifyUserArmAccessRequest.bind(this.notificationsService));
             } catch (err) {
                 console.error("Failed to send notification email: " + err);
             }
@@ -225,8 +225,8 @@ class DataInterface {
             throw new Error(errorName.UNABLE_TO_REGISTER_USER);
         }
         if (isNotify) {
-            await this.notifyService.notifyTemplate(email, firstName, lastName, this.notificationsService.sendAdminNotification,
-                this.notificationsService.sendRegistrationConfirmation);
+            await this.notifyService.notifyTemplate(email, firstName, lastName, this.notificationsService.sendAdminNotification.bind(this.notificationsService),
+                this.notificationsService.sendRegistrationConfirmation.bind(this.notificationsService));
         }
         await this.eventLoggingService.logRegisterUser(registrationInfo.userID, registrationInfo.email, registrationInfo.IDP);
         return {
