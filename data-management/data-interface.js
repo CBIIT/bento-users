@@ -154,7 +154,7 @@ class DataInterface {
                     "user": `${activeUser.firstName} ${activeUser.lastName}`
                 }
                 await this.notifyService.notifyTemplate(activeUser.email, activeUser.firstName, activeUser.lastName, messageVariables,
-                    this.notificationsService.notifyAdminArmAccessRequest, this.notificationsService.notifyUserArmAccessRequest);
+                    this.notificationsService.notifyAdminArmAccessRequest.bind(this.notificationsService), this.notificationsService.notifyUserArmAccessRequest.bind(this.notificationsService));
             } catch (err) {
                 console.error("Failed to send notification email: " + err);
             }
