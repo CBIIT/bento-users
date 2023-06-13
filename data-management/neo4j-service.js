@@ -3,7 +3,7 @@ const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
 const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../bento-event-logging/const/user-constant");
 const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
-const {LOGIN} = require("../bento-event-logging/const/event-types");
+const {LOGIN, REGISTRATION} = require("../bento-event-logging/const/event-types");
 const {executeQuery, logEvent, getRecentEvents} = require("../bento-event-logging/neo4j/neo4j-operations");
 
 class Neo4jService {
@@ -696,7 +696,7 @@ class Neo4jService {
             `
         MATCH (e:Event)
         WHERE
-            e.event_type = '${LOGIN}' AND
+            e.event_type IN ['${LOGIN}', '${REGISTRATION}'] AND
             // 86400 * 1000 millisecond = 1 day
             toInteger(e.timestamp) + (86400 * 1000 * ${config.inactive_user_days}) > toInteger(timestamp())
         WITH COLLECT(DISTINCT e.user_id) AS activeUsers
