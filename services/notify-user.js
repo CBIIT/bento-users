@@ -1,16 +1,16 @@
 const config = require('../config');
-const notify = require("../data-management/notifications");
 const {parseArrToStr} = require("../util/string-util");
 
 class NotifyUserService{
 
-    constructor(dataService) {
+    constructor(dataService, notificationService) {
         this.dataService = dataService;
+        this.notificationService = notificationService;
     }
 
     async notifyDisabledUsers(disableUsers) {
         const asyncNotify = async (email, body) => {
-            await notify.notifyDisabledUsers(email, body);
+            await this.notificationService.notifyDisabledUsers(email, body);
         }
         let promises = [];
         for (const user of disableUsers) {
@@ -29,7 +29,7 @@ class NotifyUserService{
     async notifyAdminDisabledUsers(disableUsers){
         const admins = await this.dataService.getAdmins();
         const asyncNotify = async (email, body) => {
-            await notify.notifyAdminDisableUsers(email, body);
+            await this.notificationService.notifyAdminDisableUsers(email, body);
         }
         let promises = [];
         for (const admin of admins) {

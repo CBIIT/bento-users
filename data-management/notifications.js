@@ -2,14 +2,13 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const {createEmailTemplate} = require("../lib/create-email-template");
 const {replaceMessageVariables} = require("../util/string-util");
-const {NotifyService} = require("../services/notify");
 
 const adminTemplate = {firstName: "Bento Administrator", lastName: ""};
 
 class NotificationsService{
 
-    constructor(dataService) {
-        this.notifyService = new NotifyService(dataService);
+    constructor(dataService, notifyService) {
+        this.notifyService = notifyService;
         this.email_constants = undefined
         try {
             this.email_constants = yaml.load(fs.readFileSync('yaml/notification_email_values.yaml', 'utf8'));

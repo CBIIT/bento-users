@@ -36,10 +36,10 @@ class DataInterface {
     
     constructor(dataService) {
         this.dataService = dataService;
-        this.notificationsService = new NotificationsService(dataService);
-        this.eventLoggingService = new EventLoggingService(dataService);
-        this.notifyUserService = new NotifyUserService(dataService);
-        this.notifyService = new NotifyService(dataService);
+        this.eventLoggingService = new EventLoggingService(this.dataService);
+        this.notifyService = new NotifyService(this.dataService);
+        this.notificationsService = new NotificationsService(this.dataService, this.notifyService);
+        this.notifyUserService = new NotifyUserService(this.dataService, this.notificationsService);
     }
 
     async checkUnique(email, IDP) {
