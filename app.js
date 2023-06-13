@@ -68,7 +68,7 @@ app.use('/api/users/graphql', graphql);
 app.use('/api/users', events_router);
 
 // Scheduled cronjob twice a day (1am, 10am) eastern time
-cronJob.schedule("*/60 * * * * *", async () => {
+cronJob.schedule("0 */5 * * * *", async () => {
     console.log("Running a scheduled background task to disable inactive users at " + getTimeNow());
     await dataInterface.disableInactiveUsers();
     console.log("Running a scheduled background task to delete expired token uuids at " + getTimeNow());
