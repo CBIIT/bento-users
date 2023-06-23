@@ -1,64 +1,63 @@
-const neo4j = require('neo4j-driver');
 const config = require('../config');
 const {getTimeNow} = require("../util/time-util");
 const {isUndefined} = require("../util/string-util");
 const {ADMIN, ACTIVE, NON_MEMBER, MEMBER, INACTIVE, DISABLED} = require("../bento-event-logging/const/user-constant");
-const driver = neo4j.driver(
-    config.NEO4J_URI,
-    neo4j.auth.basic(config.NEO4J_USER, config.NEO4J_PASSWORD),
-    {disableLosslessIntegers: true}
-);
 const {APPROVED, REJECTED, REVOKED} = require("../bento-event-logging/const/access-constant");
 const {LOGIN} = require("../bento-event-logging/const/event-types");
 const {executeQuery, logEvent, getRecentEvents} = require("../bento-event-logging/neo4j/neo4j-operations");
 
-//Queries
-async function createArms(arms){
-    for (let arm of arms) {
-        const cypher =
-        `
+class Neo4jService {
+
+    constructor(driver) {
+        this.driver = driver;
+    }
+
+    async createArms(arms) {
+        for (let arm of arms) {
+            const cypher =
+                `
             CREATE (arm:Arm)
             SET arm.id = $id
             SET arm.name = $name
             SET arm.acronym = $acronym
             RETURN arm
         `
-        let result = await runNeo4jQuery(arm, cypher, 'arm');
-        if (!result[0]){
-            throw new Error("Failed to initialize arm with the following data: "+arm);
+            let result = await this.runNeo4jQuery(arm, cypher, 'arm');
+            if (!result[0]) {
+                throw new Error("Failed to initialize arm with the following data: " + arm);
+            }
         }
     }
-}
 
-async function getAccesses(userID, accessStatuses){
-    let parameters = {userID, accessStatuses};
-    const cypher =
-    `
+    async getAccesses(userID, accessStatuses) {
+        let parameters = {userID, accessStatuses};
+        const cypher =
+            `
         MATCH (u:User)
         WHERE u.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(a:Access)-[:of_user]->(u)
         WHERE a.accessStatus IN $accessStatuses
         RETURN COLLECT(DISTINCT arm.id) AS result
     `
-    const result = await runNeo4jQuery(parameters, cypher, 'result');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'result');
+        return result[0];
+    }
 
-// TODO delete
-async function getAdminEmails() {
-    const cypher =
-        `
+
+    async getAdminEmails() {
+        const cypher =
+            `
         MATCH (n:User)
         WHERE n.role = '${ADMIN}' AND n.userStatus = '${ACTIVE}'
         RETURN COLLECT(DISTINCT n.email) AS result
     `
-    const result = await runNeo4jQuery({}, cypher, 'result');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery({}, cypher, 'result');
+        return result[0];
+    }
 
-async function getAdmins() {
-    const cypher =
-        `
+    async getAdmins() {
+        const cypher =
+            `
         MATCH (u:User)
         WHERE u.role = '${ADMIN}' AND u.userStatus = '${ACTIVE}'
         RETURN COLLECT (DISTINCT {
@@ -67,41 +66,82 @@ async function getAdmins() {
             email: u.email
         }) AS user
     `
-    const result = await runNeo4jQuery({}, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery({}, cypher, 'user');
+        return result[0];
+    }
 
-async function checkUnique(key) {
-    let parameters = {key: key};
-    const cypher =
-        `
+    async checkUnique(key) {
+        let parameters = {key: key};
+        const cypher =
+            `
         MATCH (n:User)
         WITH COLLECT(DISTINCT n.IDP+":"+n.email) AS keys
         RETURN NOT $key in keys as result
     `
-    const result = await runNeo4jQuery(parameters, cypher, 'result');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'result');
+        return result[0];
+    }
 
-
-async function getMyUser(parameters) {
-    const cypher =
+    async deleteUserTokenByUUIDs(parameters) {
+        const cypher =
         `
+        MATCH (user:User)
+        WHERE
+            user.email = $email AND user.IDP = $IDP
+        WITH user
+        MATCH (t:Token)
+        WHERE
+            t.uuid IN $uuids
+        WITH user, t
+        OPTIONAL MATCH (user)<-[:of_token]-(userToken:Token)
+        WHERE
+            userToken.uuid IN $uuids
+        WITH CASE user.role = '${ADMIN}' AND user.userStatus = '${ACTIVE}' WHEN TRUE THEN t ELSE userToken END as token
+        WITH token, COLLECT(DISTINCT token.uuid) as uuids
+        DETACH DELETE token
+        RETURN uuids as uuids
+        `
+        const response = await this.runNeo4jQuery(parameters, cypher, 'uuids');
+        const result = [];
+        Array.from(response).forEach((token)=>{
+            if (token.length > 0) result.push(token[0]);
+        });
+        return result;
+    }
+
+    async getUserTokenUUIDs(parameters) {
+        const cypher =
+            `
+        MATCH (user:User)
+        WHERE user.email = $email AND user.IDP = $IDP
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
+        RETURN COLLECT(DISTINCT token.uuid) as uuids
+        `
+        const result = await this.runNeo4jQuery(parameters, cypher, 'uuids');
+        return result[0];
+    }
+
+    async getMyUser(parameters) {
+        const cypher =
+            `
         MATCH (user:User)
         WHERE user.email = $email AND user.IDP = $IDP
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
         // a disabled user does not have access to acl
-        WITH user, CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) END as acl
+        WITH user, 
+            CASE WHEN user.userStatus = '${DISABLED}' THEN [] ELSE COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) END as acl,
+            COLLECT(DISTINCT token.uuid) as tokens
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -113,31 +153,35 @@ async function getMyUser(parameters) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `
-    const result = await runNeo4jQuery(parameters, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0];
+    }
 
-async function getUserByID(userID) {
-    let parameters = {userID};
-    const cypher =
-        `
+    async getUserByID(userID) {
+        let parameters = {userID};
+        const cypher =
+            `
         MATCH (user:User)
         WHERE user.userID = $userID
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -149,31 +193,35 @@ async function getUserByID(userID) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `
-    const result = await runNeo4jQuery(parameters, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0];
+    }
 
-async function getUserByEmailIDP(email, IDP) {
-    let parameters = {email, IDP};
-    const cypher =
-        `
+    async getUserByEmailIDP(email, IDP) {
+        let parameters = {email, IDP};
+        const cypher =
+            `
         MATCH (user:User)
         WHERE user.email = $email AND user.IDP = $IDP
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -185,16 +233,17 @@ async function getUserByEmailIDP(email, IDP) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `
-    const result = await runNeo4jQuery(parameters, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0];
+    }
 
-async function listUsers(parameters) {
-    const cypher =
-    `
+    async listUsers(parameters) {
+        const cypher =
+            `
         MATCH (arm:Arm) 
         WITH COUNT(DISTINCT arm) AS totalNumOfArms
         MATCH (user:User)
@@ -204,7 +253,9 @@ async function listUsers(parameters) {
         WITH user, access, totalNumOfArms
         OPTIONAL MATCH (access)-[:of_arm]->(arm:Arm)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
-        WITH user, 
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user,
+            COLLECT(DISTINCT t.uuid) AS tokens,
             user.lastName + ', ' + user.firstName AS displayName, 
             CASE WHEN user.role = '${ADMIN}' THEN totalNumOfArms ELSE COUNT(DISTINCT arm) END AS numberOfArms,
             COLLECT(DISTINCT access{
@@ -229,29 +280,30 @@ async function listUsers(parameters) {
             creationDate: user.creationDate,
             editDate: user.editDate,
             numberOfArms: numberOfArms,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
     `
-    return await runNeo4jQuery(parameters, cypher, 'user');
-}
+        return await this.runNeo4jQuery(parameters, cypher, 'user');
+    }
 
-async function listArms(parameters) {
-    const cypher =
-    `
+    async listArms(parameters) {
+        const cypher =
+            `
         MATCH (arm: Arm)
         RETURN {
             id: arm.id,
             name: arm.name
         } AS arms
     `
-    return await runNeo4jQuery(parameters, cypher, 'arms');
-}
+        return await this.runNeo4jQuery(parameters, cypher, 'arms');
+    }
 
 //Mutations
-async function requestArmAccess(listParams, userInfo) {
-    const promises = listParams.map(async (param) => {
-        const cypher =
-            `
+    async requestArmAccess(listParams, userInfo) {
+        const promises = listParams.map(async (param) => {
+            const cypher =
+                `
             MATCH (user:User) 
             WHERE user.email='${userInfo.email}' and user.IDP ='${userInfo.IDP}'
             OPTIONAL MATCH (user)<-[:of_user]-(access:Access)-[:of_arm]->(arm)
@@ -265,15 +317,16 @@ async function requestArmAccess(listParams, userInfo) {
             SET access.requestID= $requestID
             RETURN access 
             `
-        return await runNeo4jQuery(param, cypher, 'access');
-    });
-    return await Promise.all(promises);
-}
+            return await this.runNeo4jQuery(param, cypher, 'access');
+        });
+        return await Promise.all(promises);
+    }
 
 // Searching for valid arms excluding approved or requested arm
-async function searchValidRequestArm(parameters, user) {
-    const cypher =
-        `
+
+    async searchValidRequestArm(parameters, user) {
+        const cypher =
+            `
         MATCH (user:User)
         WHERE user.email='${user.email}' and user.IDP ='${user.IDP}'
         MATCH (user)<-[:of_user]-(req:Access)
@@ -284,15 +337,15 @@ async function searchValidRequestArm(parameters, user) {
         WHERE arm.id IN $armIDs and not arm.id in invalidArmIds
         RETURN DISTINCT arm
         `
-    const result = await runNeo4jQuery(parameters, cypher, 'arm');
-    const arms = [];
-    result.forEach(x => arms.push(x.properties));
-    return arms;
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'arm');
+        const arms = [];
+        result.forEach(x => arms.push(x.properties));
+        return arms;
+    }
 
-async function registerUser(parameters) {
-    const cypher =
-        `
+    async registerUser(parameters) {
+        const cypher =
+            `
         CREATE (user:User {
             firstName: $firstName,
             lastName: $lastName,
@@ -307,13 +360,13 @@ async function registerUser(parameters) {
         }) 
         RETURN user
     `
-    const result = await runNeo4jQuery(parameters, cypher, 'user');
-    return result[0].properties;
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0].properties;
+    }
 
-async function approveAccess(parameters) {
-    const cypher =
-    `  
+    async approveAccess(parameters) {
+        const cypher =
+            `  
         MATCH (user:User)
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
@@ -345,13 +398,13 @@ async function approveAccess(parameters) {
         }) AS acl
         RETURN acl    
     `
-    let result = await runNeo4jQuery(parameters, cypher, 'acl');
-    return result[0];
-}
+        let result = await this.runNeo4jQuery(parameters, cypher, 'acl');
+        return result[0];
+    }
 
-async function rejectAccess(parameters) {
-    const cypher =
-        `  
+    async rejectAccess(parameters) {
+        const cypher =
+            `  
         MATCH (user:User)
         WHERE user.userID = $userID
         MATCH (arm:Arm)<-[:of_arm]-(access:Access)-[:of_user]->(user)
@@ -375,13 +428,13 @@ async function rejectAccess(parameters) {
         }) AS acl
         RETURN acl    
     `
-    let result = await runNeo4jQuery(parameters, cypher, 'acl');
-    return result[0];
-}
+        let result = await this.runNeo4jQuery(parameters, cypher, 'acl');
+        return result[0];
+    }
 
-async function revokeAccess(parameters) {
-    const cypher =
-        `
+    async revokeAccess(parameters) {
+        const cypher =
+            `
             MATCH (user:User)
             WHERE user.userID = $userID
             OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(remaining:Access)-[:of_user]->(user)
@@ -420,35 +473,36 @@ async function revokeAccess(parameters) {
                 comment: revoked.comment
             }) AS acl
         `
-    let result =  await runNeo4jQuery(parameters, cypher, 'acl');
-    return result[0];
-}
+        let result = await this.runNeo4jQuery(parameters, cypher, 'acl');
+        return result[0];
+    }
 
-
-
-async function editUser(parameters) {
-    let cypher =
-        `
+    async editUser(parameters) {
+        let cypher =
+            `
         MATCH (user:User)
         WHERE 
             user.userID = $userID
         SET user.editDate = $editDate
         `;
-    const cypher_return =
-        `
+        const cypher_return =
+            `
         WITH user
         OPTIONAL MATCH (user)<-[:of_user]-(request:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(request)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(request)
-        WITH user, COLLECT(DISTINCT request{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: request.accessStatus,
-            requestDate: request.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: request.reviewDate,
-            comment: request.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT request{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: request.accessStatus,
+                requestDate: request.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: request.reviewDate,
+                comment: request.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -460,30 +514,31 @@ async function editUser(parameters) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `;
-    if (parameters.role) {
-        cypher = cypher +
-        `
+        if (parameters.role) {
+            cypher = cypher +
+                `
             SET user.role = $role
         `
-    }
-    if (parameters.userStatus === "" || parameters.userStatus) {
-        cypher = cypher +
-        `
+        }
+        if (parameters.userStatus === "" || parameters.userStatus) {
+            cypher = cypher +
+                `
             SET user.userStatus = $userStatus
         `
+        }
+        cypher = cypher + cypher_return;
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0];
     }
-    cypher = cypher + cypher_return;
-    const result = await runNeo4jQuery(parameters, cypher, 'user');
-    return result[0];
-}
 
-async function updateMyUser(parameters, userInfo) {
-    const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p)=>(isUndefined(p)));
-    const cypher =
-        `
+    async updateMyUser(parameters, userInfo) {
+        const isRequiredTimeUpdate = ![parameters.firstName, parameters.lastName, parameters.organization].every((p) => (isUndefined(p)));
+        const cypher =
+            `
         MATCH (user:User)
         WHERE
             user.email = '${userInfo.email}' AND user.IDP = '${userInfo.IDP}'
@@ -495,15 +550,18 @@ async function updateMyUser(parameters, userInfo) {
         OPTIONAL MATCH (user)<-[:of_user]-(access:Access)
         OPTIONAL MATCH (reviewer:User)<-[:approved_by]-(access)
         OPTIONAL MATCH (arm:Arm)<-[:of_arm]-(access)
-        WITH user, COLLECT(DISTINCT access{
-            armID: arm.id,
-            armName: arm.name,
-            accessStatus: access.accessStatus,
-            requestDate: access.requestDate,
-            reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
-            reviewDate: access.reviewDate,
-            comment: access.comment
-        }) as acl
+        OPTIONAL MATCH (user)<--(t:Token)
+        WITH user, 
+            COLLECT(DISTINCT t.uuid) AS tokens,
+            COLLECT(DISTINCT access{
+                armID: arm.id,
+                armName: arm.name,
+                accessStatus: access.accessStatus,
+                requestDate: access.requestDate,
+                reviewAdminName: reviewer.firstName + " " + reviewer.lastName,
+                reviewDate: access.reviewDate,
+                comment: access.comment
+            }) as acl
         RETURN {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -515,38 +573,39 @@ async function updateMyUser(parameters, userInfo) {
             userStatus: user.userStatus,
             creationDate: user.creationDate,
             editDate: user.editDate,
-            acl: acl
+            acl: acl,
+            tokens: tokens
         } AS user
         `;
-    const result = await runNeo4jQuery(parameters, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0];
+    }
 
-async function getArmNamesFromArmIds(armIds) {
-    const cypher =
-    `
+    async getArmNamesFromArmIds(armIds) {
+        const cypher =
+            `
         MATCH (arm:Arm)
         WHERE arm.id IN $armIds
         WITH COLLECT(DISTINCT arm.name) as names
         RETURN names
     `;
-    const result = await runNeo4jQuery({armIds: armIds}, cypher, 'names');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery({armIds: armIds}, cypher, 'names');
+        return result[0];
+    }
 
-async function getArmsFromArmIds(armIds) {
-    const cypher =
-        `
+    async getArmsFromArmIds(armIds) {
+        const cypher =
+            `
         MATCH (arm:Arm)
         WHERE arm.id IN $armIds
         RETURN arm AS arms
     `;
-    return await runNeo4jQuery({armIds: armIds}, cypher, 'arms');
-}
+        return await this.runNeo4jQuery({armIds: armIds}, cypher, 'arms');
+    }
 
-async function listRequest(parameters){
-    const cypher =
-    `
+    async listRequest(parameters) {
+        const cypher =
+            `
         MATCH (user:User)<-[:of_user]-(access:Access)-[:of_arm]->(arm:Arm)
         WHERE 
             (NOT user.role IN ['${ADMIN}']) AND 
@@ -582,12 +641,12 @@ async function listRequest(parameters){
             acl: COLLECT(DISTINCT acl)
         } as user
     `;
-    return await runNeo4jQuery(parameters, cypher, 'user');
-}
+        return await this.runNeo4jQuery(parameters, cypher, 'user');
+    }
 
-async function disableAdminRole(params, newRole) {
-    const cypher =
-        `  
+    async disableAdminRole(params, newRole) {
+        const cypher =
+            `  
         MATCH (u: User)
         WHERE u.role='${ADMIN}' and u.userID in $ids
         SET u.role='${newRole}'
@@ -597,13 +656,13 @@ async function disableAdminRole(params, newRole) {
             role: u.role
         }) as user
         `
-    const result = await runNeo4jQuery(params, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(params, cypher, 'user');
+        return result[0];
+    }
 
-async function disableUsers(params) {
-    const cypher =
-        `
+    async disableUsers(params) {
+        const cypher =
+            `
         MATCH (u: User)
         WHERE u.userID IN $ids
         SET u.userStatus='${DISABLED}'
@@ -617,13 +676,24 @@ async function disableUsers(params) {
             userStatus: u.userStatus
         }) as user
         `
-    const result = await runNeo4jQuery(params, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery(params, cypher, 'user');
+        return result[0];
+    }
 
-async function getInactiveUsers() {
-    const cypher =
+    async deleteExpiredTokenUUIDs() {
+        const cypher =
+            `
+        MATCH (token:Token)
+        WHERE 
+            toInteger(token.expiration) < toInteger(timestamp())
+        DETACH DELETE token
         `
+        await this.runNeo4jQuery({}, cypher, '');
+    }
+
+    async getInactiveUsers() {
+        const cypher =
+            `
         MATCH (e:Event)
         WHERE
             e.event_type = '${LOGIN}' AND
@@ -650,52 +720,52 @@ async function getInactiveUsers() {
             organization: u.organization
         }) as user
         `
-    const result = await runNeo4jQuery({}, cypher, 'user');
-    return result[0];
-}
+        const result = await this.runNeo4jQuery({}, cypher, 'user');
+        return result[0];
+    }
 
-async function getRecentEventsNeo4j(limit){
-    return await getRecentEvents(driver, limit)
-}
+    async linkTokenToUser(parameters, userInfo) {
+        const cypher =
+            `
+        MATCH (user:User)
+        WHERE
+            user.email = '${userInfo.email}' AND user.IDP = '${userInfo.IDP}'
+        MERGE (user)<-[:of_token]-(token:Token {uuid: $uuid,expiration: $expiration})
+        WITH user
+        OPTIONAL MATCH (user)<-[:of_token]-(token:Token)
+        WITH user, COLLECT(DISTINCT token {
+            uuid: $uuid
+        }) as token
+        RETURN {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            userID: user.userID,
+            IDP: user.IDP,
+            tokens: token
+        } AS user
+        `;
+        const result = await this.runNeo4jQuery(parameters, cypher, 'user');
+        return result[0];
+    }
 
-async function wipeDatabase() {
-    return await runNeo4jQuery({}, `MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n`, {})
-}
+    async getRecentEventsNeo4j(limit) {
+        return await getRecentEvents(this.driver, limit)
+    }
 
-async function runNeo4jQuery(parameters, cypher, returnLabel) {
-    return await executeQuery(driver, parameters, cypher, returnLabel);
-}
+    async wipeDatabase() {
+        return await this.runNeo4jQuery({}, `MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n`, {})
+    }
 
-const logEventNeo4j = async function(bentoEvent){
-    return await logEvent(driver, bentoEvent)
-};
+    async runNeo4jQuery(parameters, cypher, returnLabel) {
+        return await executeQuery(this.driver, parameters, cypher, returnLabel);
+    }
+
+    async logEventNeo4j (bentoEvent) {
+        return await logEvent(this.driver, bentoEvent)
+    };
+}
 
 module.exports = {
-    getMyUser,
-    getUserByID,
-    listUsers,
-    registerUser,
-    rejectAccess,
-    approveAccess,
-    editUser,
-    wipeDatabase,
-    checkUnique,
-    getAdminEmails,
-    listArms,
-    revokeAccess,
-    updateMyUser,
-    getAccesses,
-    requestArmAccess,
-    searchValidRequestArm,
-    createArms,
-    getArmNamesFromArmIds,
-    listRequest,
-    getInactiveUsers,
-    disableUsers,
-    disableAdminRole,
-    getAdmins,
-    getArmsFromArmIds,
-    logEventNeo4j,
-    getUserByEmailIDP,
-    getRecentEventsNeo4j
+    Neo4jService
 };

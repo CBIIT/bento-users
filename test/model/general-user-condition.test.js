@@ -8,7 +8,7 @@ describe('general user condition', () => {
             idp: "nih",
             role: ADMIN
         }
-        const generalUserCondition = new GeneralUserCondition(userInfo);
+        const generalUserCondition = new GeneralUserCondition(userInfo.email, userInfo.idp, userInfo.role);
         expect(generalUserCondition.isValid()).toBe(false);
     });
 
@@ -18,7 +18,7 @@ describe('general user condition', () => {
             idp: "nih",
             role: null
         }
-        const generalUserCondition = new GeneralUserCondition(userInfo);
+        const generalUserCondition = new GeneralUserCondition(userInfo.email, userInfo.idp, userInfo.role);
         expect(generalUserCondition.isValid()).toBe(false);
     });
 
@@ -28,7 +28,7 @@ describe('general user condition', () => {
             idp: "nih",
             role: MEMBER
         }
-        const generalUserCondition = new GeneralUserCondition(userInfo);
+        const generalUserCondition = new GeneralUserCondition(userInfo.email, userInfo.idp, userInfo.role);
         expect(generalUserCondition.isValid()).toBe(true);
     });
 });

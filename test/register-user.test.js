@@ -2,6 +2,7 @@ const {registerUser} = require("../data-management/data-interface");
 const {sendRegistrationConfirmation, sendAdminNotification} = require("../data-management/notifications");
 const {getAdminEmails, registerUser: registerUserService,getMyUser:getMyUserService, checkUnique} = require("../data-management/neo4j-service");
 const {errorName} = require("../data-management/graphql-api-constants");
+const jest = require("jest");
 // Create Data management mock
 jest.mock("../data-management/neo4j-service");
 // Create email notification mock object

@@ -17,6 +17,7 @@ type User {
     editDate: String
 
     acl: [Access]
+    tokens: [String]
 }
 
 type UserInfo {
@@ -40,6 +41,7 @@ type UserInfo {
 
     numberOfArms: Int
     acl: [Access]
+    tokens: [String]
 }
 
 type Access {
@@ -89,6 +91,16 @@ type UserRequest {
     acl: [Access]
 }
 
+type Token {
+    token: [String]
+    message: String
+}
+
+schema {
+    query: Query
+    mutation: Mutation
+}
+
 type Query {
     "Admin only"
     listUsers(role: [String] = [], userStatus: [String] = [], accessStatus: [String] = []): [UserInfo]
@@ -96,7 +108,6 @@ type Query {
     getUser(userID: ID!): User
     "Limit to current user only"
     getMyUser : User
-
     "Open to any authenticated users"
     listArms: [Arm]
 }
@@ -105,12 +116,11 @@ type Mutation {
     "User initiated operations"
     requestAccess (userInfo: RequestAccessInput!): User
     updateMyUser (userInfo: UpdateUserInput!): User
-
+    grantToken: Token
+    invalidateToken(uuids: [String] = []): Token
     "Admin only operations"
     approveAccess (userID: ID!, armIDs: [String]!, comment: String = ""): [Access]
     rejectAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
     revokeAccess (userID: ID!, armIDs: [String]!, comment: String!): [Access]
     editUser(userID: ID!, role: String, userStatus: String): User
-#    deleteUser (userID: ID!): User
-#    disableUser (userID: ID!): User
 }
