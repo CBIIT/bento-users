@@ -1,4 +1,4 @@
-FROM node:16-alpine3.11
+FROM node:16.20.2-alpine3.18
 
 ENV PORT 8083
 ENV NODE_ENV production
