@@ -1,4 +1,4 @@
-FROM node:16-alpine3.11
+FROM node:16-alpine3.11 AS fnl_base_image
 
 ENV PORT 8083
 ENV NODE_ENV production
